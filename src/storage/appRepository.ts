@@ -4,7 +4,8 @@ import {
   Donation, 
   MonthlyTarget, 
   PayrollRecord, 
-  CurrentUser 
+  CurrentUser,
+  PayrollStatus
 } from '../types';
 import { 
   initialCharities, 
@@ -14,6 +15,9 @@ import {
   initialPayrollRecords, 
   demoUsers 
 } from '../data/mockData';
+import { IAppRepository } from './types';
+import { calculatePayroll, calculateAchievement, getTargetStatus } from '../domain/finance';
+import { canTransitionPayroll } from '../domain/payroll';
 
 export const APP_STORAGE_KEY = 'ghazara_app_state_v1';
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -141,4 +145,228 @@ export function resetDemoData(): AppState {
     }
   }
   return seed;
+}
+
+// ------------------------------------------------------------------------------
+// Repository Implementations
+// ------------------------------------------------------------------------------
+
+/**
+ * Client-Side LocalStorage Repository Implementation of IAppRepository
+ */
+export class LocalStorageRepository implements IAppRepository {
+  async getAppState(): Promise<AppState> {
+    return loadAppState();
+  }
+
+  async saveAppState(state: AppState): Promise<boolean> {
+    return saveAppState(state);
+  }
+
+  async addDonation(donation: Donation, currentState: AppState): Promise<AppState> {
+    const nextDonations = [donation, ...currentState.donations];
+    
+    // Update charity raised amount
+    const nextCharities = currentState.charities.map(c => 
+      c.id === donation.charityId 
+        ? { ...c, totalRaised: c.totalRaised + donation.amount }
+        : c
+    );
+
+    // Update marketer achieved amount
+    const nextMarketers = currentState.marketers.map(m => {
+      if (m.id === donation.marketerId) {
+        return {
+          ...m,
+          currentMonthAchieved: m.currentMonthAchieved + donation.amount,
+          totalDonationsCount: m.totalDonationsCount + 1,
+        };
+      }
+      return m;
+    });
+
+    // Update targets
+    const dDate = new Date(donation.date);
+    const dMonth = isNaN(dDate.getTime()) ? 10 : dDate.getMonth() + 1;
+    const dYear = isNaN(dDate.getTime()) ? 2026 : dDate.getFullYear();
+
+    const nextTargets = currentState.monthlyTargets.map(t => {
+      if (t.marketerId === donation.marketerId && t.month === dMonth && t.year === dYear) {
+        const achieved = t.achievedAmount + donation.amount;
+        const pct = calculateAchievement(achieved, t.targetAmount);
+        return {
+          ...t,
+          achievedAmount: achieved,
+          achievementPercentage: pct,
+          status: getTargetStatus(pct),
+        };
+      }
+      return t;
+    });
+
+    // Update payroll calculations
+    const nextPayroll = currentState.payrollRecords.map(p => {
+      if (p.marketerId === donation.marketerId && p.month === dMonth && p.year === dYear) {
+        const achieved = p.achievedAmount + donation.amount;
+        const pct = calculateAchievement(achieved, p.targetAmount);
+        const calc = calculatePayroll({
+          baseSalary: p.baseSalary,
+          achievedAmount: achieved,
+          targetAmount: p.targetAmount,
+          commissionRate: p.commissionRate,
+          deductionsAmount: p.deductionsAmount,
+        });
+
+        return {
+          ...p,
+          achievedAmount: achieved,
+          achievementPercentage: pct,
+          commissionAmount: calc.commissionAmount,
+          bonusAmount: calc.bonusAmount,
+          netSalary: calc.netSalary,
+        };
+      }
+      return p;
+    });
+
+    const newState: AppState = {
+      ...currentState,
+      donations: nextDonations,
+      charities: nextCharities,
+      marketers: nextMarketers,
+      monthlyTargets: nextTargets,
+      payrollRecords: nextPayroll,
+    };
+
+    this.saveAppState(newState);
+    return newState;
+  }
+
+  async addCharity(charity: Charity, currentState: AppState): Promise<AppState> {
+    const newState: AppState = {
+      ...currentState,
+      charities: [charity, ...currentState.charities],
+    };
+    this.saveAppState(newState);
+    return newState;
+  }
+
+  async addMarketer(marketer: Marketer, currentState: AppState): Promise<AppState> {
+    const newState: AppState = {
+      ...currentState,
+      marketers: [marketer, ...currentState.marketers],
+    };
+    this.saveAppState(newState);
+    return newState;
+  }
+
+  async updatePayrollStatus(
+    id: string, 
+    newStatus: PayrollStatus, 
+    approvedBy: string | undefined, 
+    currentState: AppState
+  ): Promise<AppState> {
+    const nextPayroll = currentState.payrollRecords.map(rec => {
+      if (rec.id !== id) return rec;
+      if (!canTransitionPayroll(rec.status, newStatus)) return rec;
+
+      return {
+        ...rec,
+        status: newStatus,
+        approvedBy: newStatus === 'approved' || newStatus === 'paid' ? approvedBy || 'مدير النظام' : rec.approvedBy,
+        paidAt: newStatus === 'paid' ? new Date().toISOString() : rec.paidAt,
+      };
+    });
+
+    const newState: AppState = {
+      ...currentState,
+      payrollRecords: nextPayroll,
+    };
+    this.saveAppState(newState);
+    return newState;
+  }
+
+  async resetDemoData(): Promise<AppState> {
+    return resetDemoData();
+  }
+}
+
+/**
+ * Cloud / Remote Database Repository Adapter (PostgreSQL / Supabase)
+ * Automatically falls back to LocalStorage if offline or unconfigured.
+ */
+export class SupabaseRepository implements IAppRepository {
+  private fallbackRepo: LocalStorageRepository;
+  private supabaseUrl: string | undefined;
+  private supabaseKey: string | undefined;
+
+  constructor(supabaseUrl?: string, supabaseKey?: string) {
+    this.supabaseUrl = supabaseUrl;
+    this.supabaseKey = supabaseKey;
+    this.fallbackRepo = new LocalStorageRepository();
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.supabaseUrl && this.supabaseKey);
+  }
+
+  async getAppState(): Promise<AppState> {
+    if (!this.isConfigured()) {
+      return this.fallbackRepo.getAppState();
+    }
+    // Remote fetch implementation with local fallback
+    try {
+      // Future: fetch from Supabase REST endpoint / client
+      return this.fallbackRepo.getAppState();
+    } catch {
+      return this.fallbackRepo.getAppState();
+    }
+  }
+
+  async saveAppState(state: AppState): Promise<boolean> {
+    return this.fallbackRepo.saveAppState(state);
+  }
+
+  async addDonation(donation: Donation, currentState: AppState): Promise<AppState> {
+    return this.fallbackRepo.addDonation(donation, currentState);
+  }
+
+  async addCharity(charity: Charity, currentState: AppState): Promise<AppState> {
+    return this.fallbackRepo.addCharity(charity, currentState);
+  }
+
+  async addMarketer(marketer: Marketer, currentState: AppState): Promise<AppState> {
+    return this.fallbackRepo.addMarketer(marketer, currentState);
+  }
+
+  async updatePayrollStatus(
+    id: string, 
+    newStatus: PayrollStatus, 
+    approvedBy: string | undefined, 
+    currentState: AppState
+  ): Promise<AppState> {
+    return this.fallbackRepo.updatePayrollStatus(id, newStatus, approvedBy, currentState);
+  }
+
+  async resetDemoData(): Promise<AppState> {
+    return this.fallbackRepo.resetDemoData();
+  }
+}
+
+/**
+ * Factory that provides the active application repository instance based on environment.
+ */
+export function getAppRepository(): IAppRepository {
+  const supabaseUrl = typeof import.meta !== 'undefined' && import.meta.env 
+    ? (import.meta.env.VITE_SUPABASE_URL as string | undefined) 
+    : undefined;
+  const supabaseKey = typeof import.meta !== 'undefined' && import.meta.env 
+    ? (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) 
+    : undefined;
+
+  if (supabaseUrl && supabaseKey) {
+    return new SupabaseRepository(supabaseUrl, supabaseKey);
+  }
+
+  return new LocalStorageRepository();
 }
