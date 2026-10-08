@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   HandHeart, 
-  Search, 
   Filter, 
   Download, 
   Printer, 
   Plus, 
   Coins, 
   CreditCard,
-  Building2,
-  Calendar,
   X
 } from 'lucide-react';
-import { formatSAR, getPaymentMethodLabel, getDonorTypeLabel, getDonationStatusLabel } from '../../utils/formatters';
+import { formatSAR, getPaymentMethodLabel } from '../../utils/formatters';
 import { exportDonationsToCSV, printDonationReceipt } from '../../utils/exportUtils';
-import { PaymentMethod } from '../../types';
 
 export const DonationsView: React.FC = () => {
   const { 
@@ -254,7 +250,6 @@ export const DonationsView: React.FC = () => {
                 </tr>
               ) : (
                 filteredDonations.map((donation) => {
-                  const statusInfo = getDonationStatusLabel(donation.status);
                   return (
                     <tr key={donation.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-ghazara-orange">

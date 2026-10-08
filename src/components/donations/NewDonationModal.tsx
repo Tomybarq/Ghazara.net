@@ -3,13 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { 
   X, 
   HandHeart, 
-  Building2, 
-  CreditCard, 
   User, 
-  Phone, 
-  Tag, 
-  FileText, 
-  Sparkles, 
   Check, 
   Printer,
   Coins
@@ -74,7 +68,9 @@ export const NewDonationModal: React.FC = () => {
       notes,
     });
 
-    setLastCreatedDonation(donation);
+    if (donation) {
+      setLastCreatedDonation(donation);
+    }
   };
 
   const handleClose = () => {

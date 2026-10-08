@@ -34,10 +34,10 @@
 
 **Files:** no source changes; update this plan’s Notes section.
 
-- [ ] Run `npm.cmd run build`.
-- [ ] Run `npm.cmd run lint`.
-- [ ] Record exact failures and classify each as pre-existing or introduced.
-- [ ] Start the app with `npm.cmd run dev` and manually verify seeded dashboard, role switcher, donation modal, and mobile navigation.
+- [x] Run `npm.cmd run build`.
+- [x] Run `npm.cmd run lint`.
+- [x] Record exact failures and classify each as pre-existing or introduced.
+- [x] Start the app with `npm.cmd run dev` and manually verify seeded dashboard, role switcher, donation modal, and mobile navigation.
 
 **Exit:** baseline is recorded and the first failing behavior is identified.
 
@@ -51,12 +51,12 @@
 - Modify: `src/context/AppContext.tsx`
 - Modify: `src/types/index.ts` only if a missing domain type is required
 
-- [ ] Add `getActivePeriod(date: Date): { month: number; year: number }`.
-- [ ] Add pure functions `calculateAchievement(achieved: number, target: number): number`, `getTargetStatus(percentage: number): MonthlyTarget['status']`, `calculatePayroll(input): Pick<PayrollRecord, 'commissionAmount' | 'bonusAmount' | 'netSalary'>`.
-- [ ] Centralize the existing bonus thresholds and preserve the current business values unless product clarification changes them.
-- [ ] Replace every hard-coded `month === 10 && year === 2026` mutation path with the active-period helper.
-- [ ] Add focused tests for zero/negative target, 0%, 100%, 110%, and 115% achievement boundaries.
-- [ ] Run build, lint, and the focused tests.
+- [x] Add `getActivePeriod(date: Date): { month: number; year: number }`.
+- [x] Add pure functions `calculateAchievement(achieved: number, target: number): number`, `getTargetStatus(percentage: number): MonthlyTarget['status']`, `calculatePayroll(input): Pick<PayrollRecord, 'commissionAmount' | 'bonusAmount' | 'netSalary'>`.
+- [x] Centralize the existing bonus thresholds and preserve the current business values unless product clarification changes them.
+- [x] Replace every hard-coded `month === 10 && year === 2026` mutation path with the active-period helper.
+- [x] Add focused tests for zero/negative target, 0%, 100%, 110%, and 115% achievement boundaries.
+- [x] Run build, lint, and the focused tests.
 
 **Exit:** one source of truth exists for period, achievement, commission, bonus, and net salary calculations.
 
@@ -67,12 +67,12 @@
 - Modify: `src/context/AppContext.tsx`
 - Modify: `src/components/donations/NewDonationModal.tsx`
 
-- [ ] Add `validateDonationInput(input, state): string[]` covering amount, charity, marketer, and charity assignment.
-- [ ] Add `prepareDonation(input, now, sequence): Donation` with deterministic receipt generation.
-- [ ] Validate before any state setter runs; invalid submissions show Arabic errors and leave all arrays unchanged.
-- [ ] Ensure receipt IDs cannot collide after deletions or reloads.
-- [ ] Add tests for valid input, invalid amount, invalid references, and marketer/charity mismatch.
-- [ ] Run build, lint, and focused tests.
+- [x] Add `validateDonationInput(input, state): string[]` covering amount, charity, marketer, and charity assignment.
+- [x] Add `prepareDonation(input, now, sequence): Donation` with deterministic receipt generation.
+- [x] Validate before any state setter runs; invalid submissions show Arabic errors and leave all arrays unchanged.
+- [x] Ensure receipt IDs cannot collide after deletions or reloads.
+- [x] Add tests for valid input, invalid amount, invalid references, and marketer/charity mismatch.
+- [x] Run build, lint, and focused tests.
 
 **Exit:** donation creation is all-or-nothing and its identifiers are stable enough for the MVP.
 

@@ -3,14 +3,12 @@ import { useApp } from '../../context/AppContext';
 import { 
   Target, 
   Trophy, 
-  TrendingUp, 
   Edit3, 
   CheckCircle2, 
   Flame, 
   Coins, 
   Calendar,
-  X,
-  Sparkles
+  X
 } from 'lucide-react';
 import { formatSAR, formatPercent } from '../../utils/formatters';
 import { MonthlyTarget } from '../../types';

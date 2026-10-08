@@ -7,19 +7,30 @@ import {
   PayrollRecord, 
   CurrentUser, 
   ActiveTab, 
-  UserRole,
-  PayrollStatus
+  UserRole, 
+  PayrollStatus 
 } from '../types';
 import { 
   initialCharities, 
   initialMarketers, 
   initialDonations, 
   initialMonthlyTargets, 
-  initialPayrollRecords,
-  demoUsers
+  initialPayrollRecords, 
+  demoUsers 
 } from '../data/mockData';
+import { getActivePeriod } from '../domain/period';
+import { 
+  calculateAchievement, 
+  getTargetStatus, 
+  calculatePayroll 
+} from '../domain/finance';
+import { 
+  validateDonationInput, 
+  prepareDonation, 
+  DonationInput 
+} from '../domain/donations';
 
-interface AppContextType {
+export interface AppContextType {
   currentUser: CurrentUser;
   setCurrentUser: (user: CurrentUser) => void;
   switchRole: (role: UserRole) => void;
@@ -32,7 +43,7 @@ interface AppContextType {
   payrollRecords: PayrollRecord[];
   
   // Actions
-  addDonation: (donationData: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>) => Donation;
+  addDonation: (donationData: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>) => Donation | null;
   addCharity: (charity: Omit<Charity, 'id' | 'totalRaised' | 'activeMarketersCount'>) => void;
   updateCharity: (id: string, charity: Partial<Charity>) => void;
   addMarketer: (marketer: Omit<Marketer, 'id' | 'currentMonthAchieved' | 'totalDonationsCount'>) => void;
@@ -144,21 +155,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Add Donation with Auto-Calculations
-  const addDonation = (data: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>): Donation => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
-    const receiptNum = `REC-2026-${String(donations.length + 1).padStart(3, '0')}`;
+  // Add Donation with Pure Domain Validation and Auto-Calculations
+  const addDonation = (data: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>): Donation | null => {
+    const validation = validateDonationInput(data, { charities, marketers });
+    if (!validation.valid) {
+      showNotification(validation.errors[0] || 'بيانات التبرع غير صالحة', 'error');
+      return null;
+    }
 
-    const newDonation: Donation = {
-      ...data,
-      id: `don_${Date.now()}`,
-      receiptNumber: receiptNum,
-      date: dateStr,
-      time: timeStr,
-      status: 'completed',
-    };
+    const activePeriod = getActivePeriod();
+    const newDonation = prepareDonation(
+      data as DonationInput,
+      new Date(),
+      donations.length + 1
+    );
 
     // 1. Add to donation list
     setDonations(prev => [newDonation, ...prev]);
@@ -175,61 +185,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
 
     // 3. Update Marketer Achieved & Count
-    let updatedAchieved = 0;
-    let marketerBaseSalary = 5000;
-    let marketerCommRate = 6.0;
-    let marketerTarget = 100000;
-
     setMarketers(prev => prev.map(m => {
       if (m.id === data.marketerId) {
-        updatedAchieved = m.currentMonthAchieved + data.amount;
-        marketerBaseSalary = m.baseSalary;
-        marketerCommRate = m.commissionRate;
-        marketerTarget = m.currentMonthTarget;
         return {
           ...m,
-          currentMonthAchieved: updatedAchieved,
+          currentMonthAchieved: m.currentMonthAchieved + data.amount,
           totalDonationsCount: m.totalDonationsCount + 1,
         };
       }
       return m;
     }));
 
-    // 4. Update Monthly Target for this marketer
+    // 4. Update Monthly Target for this marketer for the active period
     setMonthlyTargets(prev => prev.map(t => {
-      if (t.marketerId === data.marketerId && t.month === 10 && t.year === 2026) {
+      if (t.marketerId === data.marketerId && t.month === activePeriod.month && t.year === activePeriod.year) {
         const newAchieved = t.achievedAmount + data.amount;
-        const newPct = (newAchieved / t.targetAmount) * 100;
-        let newStatus: MonthlyTarget['status'] = 'in_progress';
-        if (newPct >= 110) newStatus = 'exceeded';
-        else if (newPct >= 100) newStatus = 'achieved';
+        const newPct = calculateAchievement(newAchieved, t.targetAmount);
+        const newStatus = getTargetStatus(newPct);
 
         return {
           ...t,
           achievedAmount: newAchieved,
-          achievementPercentage: Number(newPct.toFixed(1)),
+          achievementPercentage: newPct,
           status: newStatus,
         };
       }
       return t;
     }));
 
-    // 5. Update / Recalculate Payroll Record for this marketer
+    // 5. Update / Recalculate Payroll Record for this marketer for the active period
     setPayrollRecords(prev => prev.map(p => {
-      if (p.marketerId === data.marketerId && p.month === 10 && p.year === 2026) {
+      if (p.marketerId === data.marketerId && p.month === activePeriod.month && p.year === activePeriod.year) {
         const newAchieved = p.achievedAmount + data.amount;
-        const newPct = (newAchieved / p.targetAmount) * 100;
-        const commAmount = (newAchieved * (p.commissionRate / 100));
-        const bonus = newPct >= 115 ? 2000 : (newPct >= 100 ? 1000 : 0);
-        const net = p.baseSalary + commAmount + bonus - p.deductionsAmount;
+        const payrollCalc = calculatePayroll({
+          baseSalary: p.baseSalary,
+          achievedAmount: newAchieved,
+          targetAmount: p.targetAmount,
+          commissionRate: p.commissionRate,
+          deductionsAmount: p.deductionsAmount,
+        });
 
         return {
           ...p,
           achievedAmount: newAchieved,
-          achievementPercentage: Number(newPct.toFixed(1)),
-          commissionAmount: Number(commAmount.toFixed(2)),
-          bonusAmount: bonus,
-          netSalary: Number(net.toFixed(2)),
+          achievementPercentage: payrollCalc.achievementPercentage,
+          commissionAmount: payrollCalc.commissionAmount,
+          bonusAmount: payrollCalc.bonusAmount,
+          netSalary: payrollCalc.netSalary,
         };
       }
       return p;
@@ -264,11 +266,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setMarketers(prev => [...prev, newMarketer]);
 
-    // Create target record for current month
+    const activePeriod = getActivePeriod();
+
+    // Create target record for active period
     const newTarget: MonthlyTarget = {
       id: `tgt_${Date.now()}`,
-      month: 10,
-      year: 2026,
+      month: activePeriod.month,
+      year: activePeriod.year,
       marketerId: newMarketer.id,
       marketerName: newMarketer.name,
       targetAmount: newMarketer.currentMonthTarget,
@@ -278,22 +282,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setMonthlyTargets(prev => [...prev, newTarget]);
 
-    // Create draft payroll record
+    // Create draft payroll record for active period
+    const initialPayroll = calculatePayroll({
+      baseSalary: newMarketer.baseSalary,
+      achievedAmount: 0,
+      targetAmount: newMarketer.currentMonthTarget,
+      commissionRate: newMarketer.commissionRate,
+      deductionsAmount: 0,
+    });
+
     const newPayroll: PayrollRecord = {
       id: `pay_${Date.now()}`,
-      month: 10,
-      year: 2026,
+      month: activePeriod.month,
+      year: activePeriod.year,
       marketerId: newMarketer.id,
       marketerName: newMarketer.name,
       baseSalary: newMarketer.baseSalary,
       targetAmount: newMarketer.currentMonthTarget,
       achievedAmount: 0,
-      achievementPercentage: 0,
+      achievementPercentage: initialPayroll.achievementPercentage,
       commissionRate: newMarketer.commissionRate,
-      commissionAmount: 0,
-      bonusAmount: 0,
+      commissionAmount: initialPayroll.commissionAmount,
+      bonusAmount: initialPayroll.bonusAmount,
       deductionsAmount: 0,
-      netSalary: newMarketer.baseSalary,
+      netSalary: initialPayroll.netSalary,
       status: 'draft',
       notes: 'مسوق جديد تم إنشاؤه.',
     };
@@ -310,15 +322,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateTarget = (targetId: string, newTargetAmount: number) => {
     setMonthlyTargets(prev => prev.map(t => {
       if (t.id === targetId) {
-        const pct = (t.achievedAmount / newTargetAmount) * 100;
-        let status: MonthlyTarget['status'] = 'in_progress';
-        if (pct >= 110) status = 'exceeded';
-        else if (pct >= 100) status = 'achieved';
+        const pct = calculateAchievement(t.achievedAmount, newTargetAmount);
+        const status = getTargetStatus(pct);
 
         return {
           ...t,
           targetAmount: newTargetAmount,
-          achievementPercentage: Number(pct.toFixed(1)),
+          achievementPercentage: pct,
           status,
         };
       }

@@ -9,27 +9,24 @@ import {
   DollarSign, 
   ShieldCheck, 
   Coins, 
-  Gift, 
-  Calendar,
-  X,
-  Sparkles
+  Gift
 } from 'lucide-react';
 import { formatSAR, formatPercent, getPayrollStatusLabel } from '../../utils/formatters';
 import { exportPayrollToCSV } from '../../utils/exportUtils';
 import { PayrollRecord } from '../../types';
+import { getActivePeriod } from '../../domain/period';
 
 export const PayrollView: React.FC = () => {
   const { 
     userPayroll, 
     currentUser, 
-    updatePayrollStatus, 
     approveAllPayroll, 
     markAllPayrollPaid 
   } = useApp();
 
-  const [selectedMonth, setSelectedMonth] = useState<number>(10);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [activePayslip, setActivePayslip] = useState<PayrollRecord | null>(null);
+  const currentPeriod = getActivePeriod();
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentPeriod.month);
+  const [selectedYear] = useState<number>(currentPeriod.year);
 
   const monthRecords = userPayroll.filter(p => p.month === selectedMonth && p.year === selectedYear);
 

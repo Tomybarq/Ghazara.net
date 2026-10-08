@@ -12,7 +12,6 @@ import {
   Sparkles,
   Plus,
   FileSpreadsheet,
-  CheckCircle2,
   Clock,
   Coins
 } from 'lucide-react';
@@ -26,7 +25,6 @@ export const DashboardView: React.FC = () => {
     marketers, 
     donations, 
     monthlyTargets, 
-    payrollRecords,
     setActiveTab, 
     setIsNewDonationModalOpen,
     setIsAIAgentOpen

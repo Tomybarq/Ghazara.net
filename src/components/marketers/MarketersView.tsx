@@ -3,16 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { 
   Users, 
   UserPlus, 
-  Target, 
-  Coins, 
-  Wallet, 
-  Phone, 
-  Mail, 
-  Building2, 
   Award, 
-  CheckCircle2, 
   X,
-  Sparkles
+  Phone,
+  Building2
 } from 'lucide-react';
 import { formatSAR, formatPercent } from '../../utils/formatters';
 
