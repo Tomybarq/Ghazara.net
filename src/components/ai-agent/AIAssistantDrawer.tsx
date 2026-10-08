@@ -6,13 +6,10 @@ import {
   Send, 
   Bot, 
   User, 
-  TrendingUp, 
-  Award, 
-  Coins, 
-  HelpCircle,
   Lightbulb
 } from 'lucide-react';
-import { formatSAR, formatPercent, getPaymentMethodLabel } from '../../utils/formatters';
+import { formatSAR, formatPercent } from '../../utils/formatters';
+import { getActivePeriod } from '../../domain/period';
 
 interface Message {
   id: string;
@@ -25,20 +22,21 @@ export const AIAssistantDrawer: React.FC = () => {
   const { 
     isAIAgentOpen, 
     setIsAIAgentOpen, 
-    donations, 
-    marketers, 
-    charities, 
-    monthlyTargets, 
-    payrollRecords,
+    userDonations, 
+    userCharities, 
+    userMarketers, 
+    userTargets, 
+    userPayroll,
     currentUser 
   } = useApp();
 
+  const activePeriod = getActivePeriod();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg_1',
       sender: 'assistant',
-      text: `أهلاً بك يا ${currentUser.name}! أنا المساعد الذكي لمنظومة غزارة لإدارة مبيعات وتبرعات الجمعيات الخيرية. يمكنك سؤالي عن تحليل الإيرادات، أداء المسوقين، نسب التارغت، أو حسابات الرواتب والعمولات الميدانية. كيف أساعدك اليوم؟`,
+      text: `أهلاً بك يا ${currentUser.name}! أنا المساعد الذكي لمنظومة غزارة لإدارة مبيعات وتبرعات الجمعيات الخيرية. يمكنك سؤالي عن تحليل الإيرادات، الأداء، المستهدفات، والتقارير المالية المتاحة لصلاحياتك. كيف أساعدك اليوم؟`,
       time: 'الآن',
     }
   ]);
@@ -52,29 +50,50 @@ export const AIAssistantDrawer: React.FC = () => {
 
   if (!isAIAgentOpen) return null;
 
-  // Real-time metrics calculations for dynamic answers
-  const totalRaised = donations.reduce((sum, d) => sum + d.amount, 0);
-  const totalTarget = monthlyTargets.reduce((sum, t) => sum + t.targetAmount, 0);
+  // Real-time scoped metrics calculations
+  const totalRaised = userDonations.reduce((sum, d) => sum + d.amount, 0);
+  const totalTarget = userTargets.reduce((sum, t) => sum + t.targetAmount, 0);
   const overallPct = totalTarget > 0 ? (totalRaised / totalTarget) * 100 : 0;
   
-  const sortedMarketers = [...marketers].sort((a, b) => b.currentMonthAchieved - a.currentMonthAchieved);
+  const sortedMarketers = [...userMarketers].sort((a, b) => b.currentMonthAchieved - a.currentMonthAchieved);
   const topMarketer = sortedMarketers[0];
-  const exceededMarketers = sortedMarketers.filter(m => (m.currentMonthAchieved / m.currentMonthTarget) >= 1);
+  const exceededMarketers = sortedMarketers.filter(m => (m.currentMonthAchieved / (m.currentMonthTarget || 1)) >= 1);
 
-  const sortedCharities = [...charities].sort((a, b) => b.totalRaised - a.totalRaised);
+  const sortedCharities = [...userCharities].sort((a, b) => b.totalRaised - a.totalRaised);
   const topCharity = sortedCharities[0];
 
-  const totalPayrollNet = payrollRecords.filter(p => p.month === 10).reduce((sum, p) => sum + p.netSalary, 0);
-  const totalCommission = payrollRecords.filter(p => p.month === 10).reduce((sum, p) => sum + p.commissionAmount, 0);
+  const currentPeriodPayroll = userPayroll.filter(
+    p => p.month === activePeriod.month && p.year === activePeriod.year
+  );
+  const totalPayrollNet = currentPeriodPayroll.reduce((sum, p) => sum + p.netSalary, 0);
+  const totalCommission = currentPeriodPayroll.reduce((sum, p) => sum + p.commissionAmount, 0);
 
-  // Quick Questions
-  const quickQuestions = [
-    'من هو أفضل مسوق لهذا الشهر؟',
-    'ما هي أعلى الجمعيات الخيرية تحصيلاً؟',
-    'كم إجمالي العمولات وصافي مسير الرواتب؟',
-    'ما هي أكثر وسائل الدفع استخداماً؟',
-    'ما هي التوصيات لتنشيط المسوقين المتعثرين؟'
-  ];
+  // Quick Questions based on Role
+  const getQuickQuestions = () => {
+    if (currentUser.role === 'charity_rep') {
+      return [
+        'كم إجمالي تبرعات الجمعية حتى الآن؟',
+        'ما هي أعلى قنوات السداد لتبرعاتنا؟',
+        'ما هي التوصيات لزيادة إيرادات الحملات؟'
+      ];
+    }
+    if (currentUser.role === 'marketer') {
+      return [
+        'ما هي نسبة إنجازي من هدفي الشهري؟',
+        'كم تبلغ عمولتي المحتسبة لشهر الحالي؟',
+        'ما هي أكثر الجمعيات تحقيقاً للتبرعات لدي؟'
+      ];
+    }
+    return [
+      'من هو أفضل مسوق لهذا الشهر؟',
+      'ما هي أعلى الجمعيات الخيرية تحصيلاً؟',
+      'كم إجمالي العمولات وصافي مسير الرواتب؟',
+      'ما هي أكثر وسائل الدفع استخداماً؟',
+      'ما هي التوصيات لتنشيط المسوقين المتعثرين؟'
+    ];
+  };
+
+  const quickQuestions = getQuickQuestions();
 
   const handleSend = (questionText?: string) => {
     const textToSend = questionText || input.trim();
@@ -95,48 +114,35 @@ export const AIAssistantDrawer: React.FC = () => {
       let reply = '';
       const q = textToSend.toLowerCase();
 
-      if (q.includes('أفضل مسوق') || q.includes('اعلى مسوق') || q.includes('تجاوز') || q.includes('المتميز')) {
-        reply = `بناءً على السجلات اللحظية لشهر أكتوبر 2026:
-🏆 **المسوق الأكثر تميزاً:** ${topMarketer?.name} بإجمالي تحصيل قدره **${formatSAR(topMarketer?.currentMonthAchieved || 0)}** (نسبة إنجاز ${formatPercent((topMarketer?.currentMonthAchieved / topMarketer?.currentMonthTarget) * 100)}).
-
-عدد المسوقين الذين تجاوزوا 100% من مستهدفهم هو **${exceededMarketers.length} مسوقين** وهم:
-${exceededMarketers.map(m => `• ${m.name}: حقق ${formatSAR(m.currentMonthAchieved)} (${formatPercent((m.currentMonthAchieved / m.currentMonthTarget) * 100)})`).join('\n')}
-
-يستحق كل مسوق تجاوز 115% بونص إضافي قدره 2,000 ر.س تم احتسابه آلياً في مسير الرواتب.`;
-      } 
-      else if (q.includes('جمعيات') || q.includes('اعلى جمعية') || q.includes('ايرادات الجمعيات')) {
-        reply = `📊 **تحليل إيرادات الجمعيات الخيرية الشريكة:**
-الجمعية المتصدرة هي **${topCharity?.name}** بمبلغ إجمالي **${formatSAR(topCharity?.totalRaised || 0)}**.
-
-ترتيب أعلى الجمعيات تحصيلاً:
-${sortedCharities.slice(0, 4).map((c, i) => `${i+1}. **${c.shortName}**: ${formatSAR(c.totalRaised)} (ترخيص: ${c.licenseNumber})`).join('\n')}
-
-إجمالي ما تم تحصيله لكافة الجمعيات حتى اللحظة هو **${formatSAR(totalRaised)}** ر.س.`;
-      }
-      else if (q.includes('رواتب') || q.includes('عمولات') || q.includes('مسير') || q.includes('صافي')) {
-        reply = `💰 **التقرير المالي لمسير رواتب شهر أكتوبر 2026:**
-• إجمالي العمولات المستحقة للمسوقين: **${formatSAR(totalCommission)}**
-• إجمالي صافي الرواتب الشاملة (الأساسي + العمولة + البونص): **${formatSAR(totalPayrollNet)}**
-
-💡 النظام يقوم باحتساب العمولة لكل مسوق فورياً بناءً على نسبة العمولة المحددة في عقده (بين 5% و 8%) والمبالغ المسجلة من الميدان.`;
-      }
-      else if (q.includes('وسائل الدفع') || q.includes('طريقة الدفع') || q.includes('طرق الدفع') || q.includes('دفع')) {
-        reply = `💳 **تحليل قنوات السداد والتبرع الميدانية:**
-أكثر طرق السداد استخداماً في الميدان:
-1. **التحويلات البنكية المباشرة (Bank Transfer):** تمثل الجزء الأكبر من تبرعات الشركات والمؤسسات وكبار المانحين.
-2. **مدى (Mada) و Apple Pay:** تسيطر على أكثر من 70% من تبرعات الأفراد في الأكشاك والفعاليات الميدانية للسرعة والسهولة.
-3. **STC Pay والتبرع النقدي:** تستخدم في الحالات الفردية السريعة.`;
-      }
-      else if (q.includes('توصيات') || q.includes('نصائح') || q.includes('زيادة') || q.includes('تنشيط')) {
-        reply = `💡 **توصيات ذكاء الأعمال لشركة غزارة:**
-1. **التركيز على برامج الشركات (CSR):** تبرعات الشركات ترفع متوسط العملية إلى أكثر من 20,000 ر.س (كما في جمعية إحسان وجمعية إنسان).
-2. **إسناد الجمعيات ذات التراخيص الصحية (مثل جمعية شفاء):** نسبة إقبال المانحين عليها عالية جداً لسداد العمليات الجراحية العاجلة.
-3. **تحفيز المسوقين الجدد (مثل خالد الغامدي ومحمد العمري):** تنظيم ورش تدريبية على أجهزة نقاط البيع الميدانية وتقنيات إقناع كبار المانحين.
-4. **تفعيل الإيصالات الرقمية الفورية:** إرسال سند الاستلام فوراً للمتبرع يزيد من معدل تكرار التبرع بنسبة 35%.`;
-      }
-      else {
-        reply = `شكراً لسؤالك! إجمالي التبرعات الحالية في النظام هو **${formatSAR(totalRaised)}** بمعدل إنجاز **${formatPercent(overallPct)}** من المستهدف العام. 
-هل تود معرفة تفاصيل أكثر عن مسوق معين، جمعية محددة، أو مراجعة مسير الرواتب؟`;
+      if (currentUser.role === 'charity_rep') {
+        if (q.includes('رواتب') || q.includes('عمولات') || q.includes('مسير')) {
+          reply = '🔒 مسيرات الرواتب والعمولات الداخلية خاصة بإدارة المبيعات والتسويق ولا تتاح لحسابات ممثلي الجمعيات.';
+        } else if (q.includes('تبرعات') || q.includes('إجمالي') || q.includes('تحصيل')) {
+          reply = `📊 **تقرير تبرعات جمعيتكم (${topCharity?.name || 'الجمعية'}):**\n• إجمالي المبالغ المحصلة: **${formatSAR(totalRaised)}**\n• عدد التبرعات المسجلة: **${userDonations.length} عملية تبرع**.\nجميع السجلات محدثة لحظياً من مسوقي غزارة الميدانيين.`;
+        } else if (q.includes('قنوات') || q.includes('دفع') || q.includes('سداد')) {
+          reply = '💳 تشير بيانات تبرعاتكم إلى أن وسائل الدفع الإلكتروني (مدى و Apple Pay) تمثل النسبة الكبرى من تبرعات الأفراد المباشرة.';
+        } else {
+          reply = `إجمالي التحصيل الميداني لجمعيتكم حتى اللحظة هو **${formatSAR(totalRaised)}** عبر **${userDonations.length} عملية تبرع**.`;
+        }
+      } else if (currentUser.role === 'marketer') {
+        if (q.includes('إنجازي') || q.includes('هدف') || q.includes('تارغت')) {
+          reply = `🎯 **متابعة إنجازك الشهري:**\n• المحقق: **${formatSAR(topMarketer?.currentMonthAchieved || 0)}** من مستهدف **${formatSAR(topMarketer?.currentMonthTarget || 0)}**\n• نسبة الإنجاز: **${formatPercent(overallPct)}**\n${overallPct >= 100 ? '🎉 أحسنت! لقد حققت الهدف الشهري واستحققت حافز التميز.' : 'استمر في بذل الجهد للوصول إلى 100% وتحقيق حافز إضافي!'}`;
+        } else if (q.includes('عمول') || q.includes('راتب') || q.includes('مستحق')) {
+          reply = `💰 **بيانات مستحقاتك المالية للشهر الحالي:**\n• العمولة المكتسبة: **${formatSAR(totalCommission)}**\n• صافي الراتب التقديري: **${formatSAR(totalPayrollNet)}**\n(يتم صرف الرواتب والعمولات بعد اعتمادها من الإدارة المالية).`;
+        } else {
+          reply = `حققت حتى الآن **${formatSAR(totalRaised)}** بنسبة إنجاز **${formatPercent(overallPct)}**. لديك **${userCharities.length} جمعيات معتمدة** يمكنك تسويق مشاريعها.`;
+        }
+      } else {
+        // Admin responses
+        if (q.includes('أفضل مسوق') || q.includes('اعلى مسوق') || q.includes('تجاوز') || q.includes('المتميز')) {
+          reply = `بناءً على السجلات اللحظية لشهر ${activePeriod.month}/${activePeriod.year}:\n🏆 **المسوق الأكثر تميزاً:** ${topMarketer?.name || 'لا يوجد'} بإجمالي تحصيل قدره **${formatSAR(topMarketer?.currentMonthAchieved || 0)}**.\n\nعدد المسوقين المحققين لأهدافهم: **${exceededMarketers.length} مسوقين**.\nيتم احتساب بونص إضافي آلياً عند تجاوز 115%.`;
+        } else if (q.includes('جمعيات') || q.includes('اعلى جمعية') || q.includes('ايرادات الجمعيات')) {
+          reply = `📊 **تحليل إيرادات الجمعيات الخيرية الشريكة:**\nالجمعية المتصدرة هي **${topCharity?.name || 'لا توجد'}** بمبلغ إجمالي **${formatSAR(topCharity?.totalRaised || 0)}**.\n\nإجمالي ما تم تحصيله لكافة الجمعيات: **${formatSAR(totalRaised)}**.`;
+        } else if (q.includes('رواتب') || q.includes('عمولات') || q.includes('مسير') || q.includes('صافي')) {
+          reply = `💰 **التقرير المالي لمسير رواتب شهر ${activePeriod.month}/${activePeriod.year}:**\n• إجمالي العمولات: **${formatSAR(totalCommission)}**\n• إجمالي صافي المسير: **${formatSAR(totalPayrollNet)}**\n• حالة المسيرات: تخضع لدورة الاعتماد والصرف الإلزامية.`;
+        } else {
+          reply = `إجمالي التبرعات الحالية في النظام هو **${formatSAR(totalRaised)}** بمعدل إنجاز **${formatPercent(overallPct)}** من المستهدف العام.`;
+        }
       }
 
       setIsTyping(false);
@@ -149,7 +155,7 @@ ${sortedCharities.slice(0, 4).map((c, i) => `${i+1}. **${c.shortName}**: ${forma
           time: new Date().toTimeString().substring(0, 5),
         }
       ]);
-    }, 600);
+    }, 500);
   };
 
   return (
@@ -169,9 +175,9 @@ ${sortedCharities.slice(0, 4).map((c, i) => `${i+1}. **${c.shortName}**: ${forma
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                 <span>مساعد غزارة الذكي للعمليات</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Live</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Scoped</span>
               </h3>
-              <p className="text-[11px] text-purple-200/80">تحليل لحظي لبيانات التبرعات والمسوقين والرواتب</p>
+              <p className="text-[11px] text-purple-200/80">تحليل لحظي مخصص لصلاحيات: {currentUser.name}</p>
             </div>
           </div>
 
@@ -235,7 +241,7 @@ ${sortedCharities.slice(0, 4).map((c, i) => `${i+1}. **${c.shortName}**: ${forma
           {isTyping && (
             <div className="flex items-center gap-2 text-xs text-purple-300 p-2">
               <Sparkles className="w-4 h-4 animate-spin text-ghazara-orange" />
-              <span>جاري تحليل بيانات العمليات وحساب الأرقام...</span>
+              <span>جاري استخلاص وتحليل البيانات المتاحة لصلاحياتك...</span>
             </div>
           )}
           <div ref={messagesEndRef} />

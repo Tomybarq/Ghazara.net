@@ -86,10 +86,10 @@
 - Modify: `src/components/layout/Sidebar.tsx`
 - Modify: `src/components/layout/MobileNavbar.tsx`
 
-- [ ] Add pure selectors/capability checks for each role.
-- [ ] Route all user-visible lists and AI context through scoped selectors.
-- [ ] Hide or disable actions that the role cannot perform, while retaining context-level guards.
-- [ ] Add tests proving marketer and charity representative isolation.
+- [x] Add pure selectors/capability checks for each role.
+- [x] Route all user-visible lists and AI context through scoped selectors.
+- [x] Hide or disable actions that the role cannot perform, while retaining context-level guards.
+- [x] Add tests proving marketer and charity representative isolation.
 
 **Exit:** access behavior is centralized, testable, and consistent across desktop/mobile navigation.
 
@@ -100,10 +100,10 @@
 - Modify: `src/context/AppContext.tsx`
 - Modify: `src/components/payroll/PayrollView.tsx`
 
-- [ ] Add `canTransitionPayroll(from, to)` and reject invalid transitions.
-- [ ] Require `approved` before `paid`; make `paid` terminal for ordinary UI actions.
-- [ ] Ensure bulk actions use the same transition function as row actions.
-- [ ] Add tests for draft→reviewed→approved→paid and rejected reverse transitions.
+- [x] Add `canTransitionPayroll(from, to)` and reject invalid transitions.
+- [x] Require `approved` before `paid`; make `paid` terminal for ordinary UI actions.
+- [x] Ensure bulk actions use the same transition function as row actions.
+- [x] Add tests for draft→reviewed→approved→paid and rejected reverse transitions.
 
 **Exit:** payroll lifecycle rules are enforced uniformly.
 

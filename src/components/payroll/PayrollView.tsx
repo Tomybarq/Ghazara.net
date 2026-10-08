@@ -4,22 +4,22 @@ import {
   Wallet, 
   CheckCircle, 
   Download, 
-  FileText, 
   Printer, 
-  DollarSign, 
   ShieldCheck, 
-  Coins, 
-  Gift
+  Check,
+  Eye
 } from 'lucide-react';
 import { formatSAR, formatPercent, getPayrollStatusLabel } from '../../utils/formatters';
 import { exportPayrollToCSV } from '../../utils/exportUtils';
-import { PayrollRecord } from '../../types';
+import { PayrollRecord, PayrollStatus } from '../../types';
 import { getActivePeriod } from '../../domain/period';
+import { canManagePayroll } from '../../domain/access';
 
 export const PayrollView: React.FC = () => {
   const { 
     userPayroll, 
     currentUser, 
+    updatePayrollStatus,
     approveAllPayroll, 
     markAllPayrollPaid 
   } = useApp();
@@ -37,6 +37,7 @@ export const PayrollView: React.FC = () => {
 
   const isAllApproved = monthRecords.length > 0 && monthRecords.every(p => p.status === 'approved' || p.status === 'paid');
   const isAllPaid = monthRecords.length > 0 && monthRecords.every(p => p.status === 'paid');
+  const hasAdminPrivilege = canManagePayroll(currentUser.role);
 
   const printSinglePayslip = (record: PayrollRecord) => {
     const printWin = window.open('', '_blank', 'width=700,height=800');
@@ -114,7 +115,7 @@ export const PayrollView: React.FC = () => {
           </div>
 
           <div style="margin-top: 20px; font-size: 12px; color: #475569;">
-            <div><strong>حالة المسير:</strong> ${record.status === 'paid' ? 'تم الصرف والتحويل البنكي' : 'معتمد'}</div>
+            <div><strong>حالة المسير:</strong> ${record.status === 'paid' ? 'تم الصرف والتحويل البنكي' : record.status === 'approved' ? 'معتمد للصرف' : 'مسودة'}</div>
             ${record.approvedBy ? `<div><strong>معتمد من:</strong> ${record.approvedBy}</div>` : ''}
           </div>
 
@@ -129,6 +130,10 @@ export const PayrollView: React.FC = () => {
 
     printWin.document.write(html);
     printWin.document.close();
+  };
+
+  const handleRowTransition = (recordId: string, nextStatus: PayrollStatus) => {
+    updatePayrollStatus(recordId, nextStatus);
   };
 
   return (
@@ -153,8 +158,8 @@ export const PayrollView: React.FC = () => {
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
             className="bg-[#12122B] border border-[#23234A] rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none focus:border-ghazara-orange"
           >
-            <option value={10}>أكتوبر 2026 (الشهر الحالي)</option>
-            <option value={9}>سبتمبر 2026 (مصروف)</option>
+            <option value={currentPeriod.month}>الشهر الحالي ({currentPeriod.month}/{currentPeriod.year})</option>
+            <option value={currentPeriod.month > 1 ? currentPeriod.month - 1 : 12}>الشهر السابق</option>
           </select>
 
           <button
@@ -193,20 +198,20 @@ export const PayrollView: React.FC = () => {
       </div>
 
       {/* Admin Approval Control Bar */}
-      {currentUser.role === 'admin' && (
+      {hasAdminPrivilege && (
         <div className="glass-card p-4 rounded-2xl bg-gradient-to-r from-[#1E113E] to-[#150A2E] border border-[#6B21C8]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/30 shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-sm font-bold text-white">إجراءات الاعتماد والصرف الإداري</div>
+              <div className="text-sm font-bold text-white">دورة الاعتماد والصرف الإداري</div>
               <div className="text-xs text-purple-200/80">
                 {isAllPaid 
-                  ? 'تم إغلاق مسير هذا الشهر وصرف كافة الرواتب والعمولات للحسابات البنكية.' 
+                  ? 'تم إغلاق مسير هذا الشهر وصرف كافة الرواتب والعمولات للحسابات البنكية (حالة نهائية).' 
                   : isAllApproved 
-                    ? 'تم اعتماد المسير وجاهز للتحويل والصرف النهائي.' 
-                    : 'قم بمراجعة المسير ثم اضغط اعتماد أو صرف للمسوقين.'}
+                    ? 'تم اعتماد جميع المسيرات وجاهزة للتحويل والصرف النهائي.' 
+                    : 'يمكنك مراجعة المسيرات واعتمادها بالكامل قبل تنفيذ أمر التحويل والصرف.'}
               </div>
             </div>
           </div>
@@ -251,6 +256,7 @@ export const PayrollView: React.FC = () => {
                 <th className="py-3.5 px-4">حوافز وبونص</th>
                 <th className="py-3.5 px-4">صافي الراتب</th>
                 <th className="py-3.5 px-4">الحالة</th>
+                {hasAdminPrivilege && <th className="py-3.5 px-4 text-center">إجراء دورة المسير</th>}
                 <th className="py-3.5 px-4 text-center">قسيمة</th>
               </tr>
             </thead>
@@ -295,6 +301,58 @@ export const PayrollView: React.FC = () => {
                         {statusInfo.label}
                       </span>
                     </td>
+
+                    {/* Admin Row State Actions */}
+                    {hasAdminPrivilege && (
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {record.status === 'draft' && (
+                            <>
+                              <button
+                                onClick={() => handleRowTransition(record.id, 'reviewed')}
+                                className="px-2 py-1 rounded bg-[#1A1A3A] hover:bg-[#252550] text-[10px] text-slate-200 border border-[#23234A]"
+                                title="تدقيق ومراجعة"
+                              >
+                                <Eye className="w-3 h-3 inline ml-0.5 text-blue-400" />
+                                <span>تدقيق</span>
+                              </button>
+                              <button
+                                onClick={() => handleRowTransition(record.id, 'approved')}
+                                className="px-2 py-1 rounded bg-purple-900/50 hover:bg-purple-800 text-[10px] text-purple-200 border border-purple-500/40"
+                                title="اعتماد مباشر"
+                              >
+                                <Check className="w-3 h-3 inline ml-0.5 text-emerald-400" />
+                                <span>اعتماد</span>
+                              </button>
+                            </>
+                          )}
+                          {record.status === 'reviewed' && (
+                            <button
+                              onClick={() => handleRowTransition(record.id, 'approved')}
+                              className="px-2 py-1 rounded bg-purple-900/50 hover:bg-purple-800 text-[10px] text-purple-200 border border-purple-500/40"
+                              title="اعتماد"
+                            >
+                              <Check className="w-3 h-3 inline ml-0.5 text-emerald-400" />
+                              <span>اعتماد</span>
+                            </button>
+                          )}
+                          {record.status === 'approved' && (
+                            <button
+                              onClick={() => handleRowTransition(record.id, 'paid')}
+                              className="px-2 py-1 rounded bg-emerald-900/50 hover:bg-emerald-800 text-[10px] text-emerald-200 border border-emerald-500/40 font-bold"
+                              title="صرف وتحويل"
+                            >
+                              <CheckCircle className="w-3 h-3 inline ml-0.5 text-emerald-400" />
+                              <span>صرف</span>
+                            </button>
+                          )}
+                          {record.status === 'paid' && (
+                            <span className="text-[10px] text-slate-500 font-medium">مكتمل</span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => printSinglePayslip(record)}

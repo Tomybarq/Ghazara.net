@@ -14,11 +14,23 @@ import {
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { formatSAR } from '../../utils/formatters';
+import { getAccessibleTabs } from '../../domain/access';
 
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
 }
+
+const TAB_ICONS: Record<ActiveTab, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  donations: HandHeart,
+  marketers: Users,
+  charities: Building2,
+  targets: Target,
+  payroll: Wallet,
+  charity_portal: Building2,
+  reports: FileSpreadsheet,
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const { 
@@ -26,42 +38,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
     setActiveTab, 
     currentUser, 
     setIsAIAgentOpen,
-    donations,
     userDonations
   } = useApp();
 
   const totalRaisedCurrent = userDonations.reduce((acc, curr) => acc + curr.amount, 0);
-
-  const getNavItems = () => {
-    if (currentUser.role === 'charity_rep') {
-      return [
-        { id: 'charity_portal' as ActiveTab, label: 'لوحة الجمعية', icon: Building2 },
-        { id: 'donations' as ActiveTab, label: 'سجل التبرعات الواردة', icon: HandHeart },
-      ];
-    }
-
-    if (currentUser.role === 'marketer') {
-      return [
-        { id: 'dashboard' as ActiveTab, label: 'لوحة إنجازي', icon: LayoutDashboard },
-        { id: 'donations' as ActiveTab, label: 'تبرعاتي الميدانية', icon: HandHeart },
-        { id: 'targets' as ActiveTab, label: 'هدفي الشهري', icon: Target },
-        { id: 'payroll' as ActiveTab, label: 'عمولاتي وراتبي', icon: Wallet },
-        { id: 'charities' as ActiveTab, label: 'الجمعيات المسندة لي', icon: Building2 },
-      ];
-    }
-
-    // Admin default
-    return [
-      { id: 'dashboard' as ActiveTab, label: 'لوحة التحكم الرئيسية', icon: LayoutDashboard },
-      { id: 'donations' as ActiveTab, label: 'إدارة التبرعات والسجلات', icon: HandHeart },
-      { id: 'marketers' as ActiveTab, label: 'فريق المسوقين الميدانيين', icon: Users },
-      { id: 'charities' as ActiveTab, label: 'دليل الجمعيات الخيرية', icon: Building2 },
-      { id: 'targets' as ActiveTab, label: 'المستهدفات الشهرية', icon: Target },
-      { id: 'payroll' as ActiveTab, label: 'مسير الرواتب والعمولات', icon: Wallet },
-    ];
-  };
-
-  const navItems = getNavItems();
+  const navItems = getAccessibleTabs(currentUser.role).map(tab => ({
+    ...tab,
+    icon: TAB_ICONS[tab.id] || LayoutDashboard,
+  }));
 
   return (
     <aside 
@@ -136,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           <div className="flex items-center justify-between text-xs text-purple-200 mb-1">
             <span className="flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5 text-ghazara-orange" />
-              {currentUser.role === 'admin' ? 'إجمالي المحصل لشهر أكتوبر' : 'إنجازك المالي'}
+              {currentUser.role === 'admin' ? 'إجمالي المحصل في النظام' : 'إنجازك المالي'}
             </span>
           </div>
           <div className="text-lg font-black text-white">

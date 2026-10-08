@@ -29,6 +29,22 @@ import {
   prepareDonation, 
   DonationInput 
 } from '../domain/donations';
+import { 
+  getVisibleDonations, 
+  getVisibleCharities, 
+  getVisibleMarketers, 
+  getVisibleTargets, 
+  getVisiblePayroll,
+  canManageCharities,
+  canManageMarketers,
+  canManageTargets,
+  canCreateDonation
+} from '../domain/access';
+import { 
+  validatePayrollTransition, 
+  validateBulkApproval, 
+  validateBulkPayment 
+} from '../domain/payroll';
 
 export interface AppContextType {
   currentUser: CurrentUser;
@@ -49,9 +65,9 @@ export interface AppContextType {
   addMarketer: (marketer: Omit<Marketer, 'id' | 'currentMonthAchieved' | 'totalDonationsCount'>) => void;
   updateMarketer: (id: string, marketer: Partial<Marketer>) => void;
   updateTarget: (targetId: string, newTargetAmount: number) => void;
-  updatePayrollStatus: (payrollId: string, status: PayrollStatus) => void;
-  markAllPayrollPaid: (month: number, year: number) => void;
-  approveAllPayroll: (month: number, year: number) => void;
+  updatePayrollStatus: (payrollId: string, status: PayrollStatus) => boolean;
+  markAllPayrollPaid: (month: number, year: number) => boolean;
+  approveAllPayroll: (month: number, year: number) => boolean;
   
   // Modals & UI States
   isNewDonationModalOpen: boolean;
@@ -63,9 +79,10 @@ export interface AppContextType {
   notification: { message: string; type: 'success' | 'info' | 'error' } | null;
   showNotification: (message: string, type?: 'success' | 'info' | 'error') => void;
 
-  // Filtered views based on roles
+  // Filtered views strictly based on roles
   userDonations: Donation[];
   userCharities: Charity[];
+  userMarketers: Marketer[];
   userTargets: MonthlyTarget[];
   userPayroll: PayrollRecord[];
 }
@@ -157,6 +174,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Add Donation with Pure Domain Validation and Auto-Calculations
   const addDonation = (data: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>): Donation | null => {
+    if (!canCreateDonation(currentUser.role)) {
+      showNotification('غير مصرح: هذا الحساب لا يملك صلاحية تسجيل تبرعات', 'error');
+      return null;
+    }
+
     const validation = validateDonationInput(data, { charities, marketers });
     if (!validation.valid) {
       showNotification(validation.errors[0] || 'بيانات التبرع غير صالحة', 'error');
@@ -196,7 +218,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return m;
     }));
 
-    // 4. Update Monthly Target for this marketer for the active period
+    // 4. Update Monthly Target for this marketer for active period
     setMonthlyTargets(prev => prev.map(t => {
       if (t.marketerId === data.marketerId && t.month === activePeriod.month && t.year === activePeriod.year) {
         const newAchieved = t.achievedAmount + data.amount;
@@ -213,7 +235,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return t;
     }));
 
-    // 5. Update / Recalculate Payroll Record for this marketer for the active period
+    // 5. Update / Recalculate Payroll Record for this marketer for active period
     setPayrollRecords(prev => prev.map(p => {
       if (p.marketerId === data.marketerId && p.month === activePeriod.month && p.year === activePeriod.year) {
         const newAchieved = p.achievedAmount + data.amount;
@@ -242,6 +264,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addCharity = (charityData: Omit<Charity, 'id' | 'totalRaised' | 'activeMarketersCount'>) => {
+    if (!canManageCharities(currentUser.role)) {
+      showNotification('غير مصرح: إضافة الجمعيات مقتصرة على الإدارة فقط', 'error');
+      return;
+    }
+
     const newCharity: Charity = {
       ...charityData,
       id: `cht_${Date.now()}`,
@@ -253,11 +280,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateCharity = (id: string, updatedFields: Partial<Charity>) => {
+    if (!canManageCharities(currentUser.role)) {
+      showNotification('غير مصرح: تعديل الجمعيات مقتصر على الإدارة فقط', 'error');
+      return;
+    }
+
     setCharities(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
     showNotification('تم تحديث بيانات الجمعية بنجاح', 'success');
   };
 
   const addMarketer = (marketerData: Omit<Marketer, 'id' | 'currentMonthAchieved' | 'totalDonationsCount'>) => {
+    if (!canManageMarketers(currentUser.role)) {
+      showNotification('غير مصرح: إضافة المسوقين مقتصرة على الإدارة فقط', 'error');
+      return;
+    }
+
     const newMarketer: Marketer = {
       ...marketerData,
       id: `mkt_${Date.now()}`,
@@ -315,11 +352,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateMarketer = (id: string, updatedFields: Partial<Marketer>) => {
+    if (!canManageMarketers(currentUser.role)) {
+      showNotification('غير مصرح: تعديل بيانات المسوقين مقتصر على الإدارة فقط', 'error');
+      return;
+    }
+
     setMarketers(prev => prev.map(m => m.id === id ? { ...m, ...updatedFields } : m));
     showNotification('تم تحديث بيانات المسوق بنجاح', 'success');
   };
 
   const updateTarget = (targetId: string, newTargetAmount: number) => {
+    if (!canManageTargets(currentUser.role)) {
+      showNotification('غير مصرح: تعديل المستهدفات مقتصر على الإدارة فقط', 'error');
+      return;
+    }
+
     setMonthlyTargets(prev => prev.map(t => {
       if (t.id === targetId) {
         const pct = calculateAchievement(t.achievedAmount, newTargetAmount);
@@ -337,7 +384,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showNotification('تم تحديث المستهدف الشهري بنجاح', 'success');
   };
 
-  const updatePayrollStatus = (payrollId: string, status: PayrollStatus) => {
+  const updatePayrollStatus = (payrollId: string, status: PayrollStatus): boolean => {
+    const targetRecord = payrollRecords.find(p => p.id === payrollId);
+    if (!targetRecord) {
+      showNotification('مسير الرواتب غير موجود', 'error');
+      return false;
+    }
+
+    const validation = validatePayrollTransition(targetRecord, status, currentUser);
+    if (!validation.allowed) {
+      showNotification(validation.error || 'عملية انتقال غير صالحة', 'error');
+      return false;
+    }
+
     setPayrollRecords(prev => prev.map(p => {
       if (p.id === payrollId) {
         return {
@@ -349,10 +408,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       return p;
     }));
-    showNotification(`تم تحديث مسير الرواتب إلى: ${status === 'paid' ? 'تم الصرف والتحويل' : status === 'approved' ? 'معتمد للصرف' : status}`, 'success');
+
+    const statusText = status === 'paid' ? 'تم الصرف والتحويل' : status === 'approved' ? 'معتمد للصرف' : status === 'reviewed' ? 'تمت المراجعة والتدقيق' : 'مسودة';
+    showNotification(`تم تحديث مسير الرواتب إلى: ${statusText}`, 'success');
+    return true;
   };
 
-  const approveAllPayroll = (month: number, year: number) => {
+  const approveAllPayroll = (month: number, year: number): boolean => {
+    const monthRecords = payrollRecords.filter(p => p.month === month && p.year === year);
+    const validation = validateBulkApproval(monthRecords, currentUser);
+    if (!validation.allowed) {
+      showNotification(validation.error || 'تعذر اعتماد المسيرات', 'error');
+      return false;
+    }
+
     setPayrollRecords(prev => prev.map(p => {
       if (p.month === month && p.year === year && p.status !== 'paid') {
         return {
@@ -364,12 +433,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return p;
     }));
     showNotification(`تم اعتماد مسيرات رواتب شهر ${month}/${year} بالكامل!`, 'success');
+    return true;
   };
 
-  const markAllPayrollPaid = (month: number, year: number) => {
+  const markAllPayrollPaid = (month: number, year: number): boolean => {
+    const monthRecords = payrollRecords.filter(p => p.month === month && p.year === year);
+    const validation = validateBulkPayment(monthRecords, currentUser);
+    if (!validation.allowed) {
+      showNotification(validation.error || 'تعذر إتمام الصرف', 'error');
+      return false;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     setPayrollRecords(prev => prev.map(p => {
-      if (p.month === month && p.year === year) {
+      if (p.month === month && p.year === year && p.status !== 'paid') {
         return {
           ...p,
           status: 'paid',
@@ -380,37 +457,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return p;
     }));
     showNotification(`تم إغلاق مسير رواتب شهر ${month}/${year} وتحويل كافة المستحقات!`, 'success');
+    return true;
   };
 
-  // Role Scoped Data Filtering
-  const userDonations = donations.filter(d => {
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'marketer') return d.marketerId === currentUser.marketerId;
-    if (currentUser.role === 'charity_rep') return d.charityId === currentUser.charityId;
-    return true;
-  });
-
-  const userCharities = charities.filter(c => {
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'charity_rep') return c.id === currentUser.charityId;
-    if (currentUser.role === 'marketer') {
-      const marketer = marketers.find(m => m.id === currentUser.marketerId);
-      return marketer ? marketer.assignedCharityIds.includes(c.id) : true;
-    }
-    return true;
-  });
-
-  const userTargets = monthlyTargets.filter(t => {
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'marketer') return t.marketerId === currentUser.marketerId;
-    return true;
-  });
-
-  const userPayroll = payrollRecords.filter(p => {
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'marketer') return p.marketerId === currentUser.marketerId;
-    return false; // Charity reps do not see sales payroll
-  });
+  // Pure Role-Scoped Data Filtering
+  const userDonations = getVisibleDonations(donations, currentUser);
+  const userCharities = getVisibleCharities(charities, currentUser, marketers);
+  const userMarketers = getVisibleMarketers(marketers, currentUser);
+  const userTargets = getVisibleTargets(monthlyTargets, currentUser);
+  const userPayroll = getVisiblePayroll(payrollRecords, currentUser);
 
   return (
     <AppContext.Provider value={{
@@ -443,6 +498,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       showNotification,
       userDonations,
       userCharities,
+      userMarketers,
       userTargets,
       userPayroll,
     }}>
