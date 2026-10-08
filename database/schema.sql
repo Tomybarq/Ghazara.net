@@ -1,6 +1,7 @@
 -- ==============================================================================
--- Ghazara Sales & Charity Marketing MVP - PostgreSQL Database Schema
--- Architecture: Production-ready relational schema with RLS & Constraints
+-- Ghazara Sales & Charity Marketing MVP - PostgreSQL Database Schema (Prisma Compatible)
+-- Architecture: Production-ready relational schema with RLS, Enums & Foreign Keys
+-- Compatible with Prisma Accelerate, Pulse, Supabase, Neon & Direct PostgreSQL
 -- ==============================================================================
 
 -- Enable UUID generation extension if not available
@@ -54,6 +55,18 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+    CREATE TYPE charity_status AS ENUM ('active', 'inactive');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE marketer_status AS ENUM ('active', 'on_leave', 'inactive');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- ------------------------------------------------------------------------------
 -- 2. Core Tables
 -- ------------------------------------------------------------------------------
@@ -74,7 +87,7 @@ CREATE TABLE IF NOT EXISTS charities (
     total_raised NUMERIC(14, 2) NOT NULL DEFAULT 0.00 CHECK (total_raised >= 0),
     target_amount NUMERIC(14, 2) NOT NULL DEFAULT 0.00 CHECK (target_amount >= 0),
     active_marketers_count INT NOT NULL DEFAULT 0 CHECK (active_marketers_count >= 0),
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    status charity_status NOT NULL DEFAULT 'active',
     commission_rate NUMERIC(5, 2) NOT NULL DEFAULT 10.00 CHECK (commission_rate >= 0 AND commission_rate <= 100),
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -95,7 +108,7 @@ CREATE TABLE IF NOT EXISTS marketers (
     current_month_target NUMERIC(12, 2) NOT NULL DEFAULT 100000.00 CHECK (current_month_target >= 0),
     current_month_achieved NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (current_month_achieved >= 0),
     total_donations_count INT NOT NULL DEFAULT 0 CHECK (total_donations_count >= 0),
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'on_leave', 'inactive')),
+    status marketer_status NOT NULL DEFAULT 'active',
     join_date DATE NOT NULL DEFAULT CURRENT_DATE,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -130,7 +143,7 @@ CREATE TABLE IF NOT EXISTS donations (
     payment_method payment_method NOT NULL DEFAULT 'mada',
     status donation_status NOT NULL DEFAULT 'completed',
     date DATE NOT NULL DEFAULT CURRENT_DATE,
-    time TIME NOT NULL DEFAULT CURRENT_TIME,
+    time VARCHAR(20) NOT NULL DEFAULT '12:00:00',
     campaign_name VARCHAR(255) DEFAULT 'كفالة ورعاية شاملة',
     receipt_image_url TEXT,
     payment_reference VARCHAR(100),
@@ -186,11 +199,20 @@ CREATE TABLE IF NOT EXISTS payroll_records (
 -- 3. High-Performance Query Indexes
 -- ------------------------------------------------------------------------------
 
+CREATE INDEX IF NOT EXISTS idx_charities_code ON charities(code);
+CREATE INDEX IF NOT EXISTS idx_charities_city ON charities(city);
+CREATE INDEX IF NOT EXISTS idx_marketers_email ON marketers(email);
+CREATE INDEX IF NOT EXISTS idx_marketers_national_id ON marketers(national_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_donations_charity_id ON donations(charity_id);
 CREATE INDEX IF NOT EXISTS idx_donations_marketer_id ON donations(marketer_id);
 CREATE INDEX IF NOT EXISTS idx_donations_date ON donations(date DESC);
+CREATE INDEX IF NOT EXISTS idx_donations_receipt_number ON donations(receipt_number);
 CREATE INDEX IF NOT EXISTS idx_monthly_targets_period ON monthly_targets(year, month);
+CREATE INDEX IF NOT EXISTS idx_monthly_targets_marketer ON monthly_targets(marketer_id);
 CREATE INDEX IF NOT EXISTS idx_payroll_records_period ON payroll_records(year, month);
+CREATE INDEX IF NOT EXISTS idx_payroll_records_marketer ON payroll_records(marketer_id);
 
 -- ------------------------------------------------------------------------------
 -- 4. Row-Level Security (RLS) Isolation Policies

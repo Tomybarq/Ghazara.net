@@ -1,0 +1,259 @@
+// ==============================================================================
+// Ghazara Sales & Charity Marketing MVP - Prisma Schema
+// Provider: PostgreSQL (Compatible with Prisma Accelerate & Pulse)
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------------------
+
+enum UserRole {
+  admin
+  marketer
+  charity_rep
+
+  @@map("user_role")
+}
+
+enum DonorType {
+  individual
+  corporate
+  anonymous
+
+  @@map("donor_type")
+}
+
+enum PaymentMethod {
+  mada
+  visa
+  mastercard
+  apple_pay
+  stc_pay
+  bank_transfer
+  cash
+
+  @@map("payment_method")
+}
+
+enum DonationStatus {
+  completed
+  pending
+  refunded
+
+  @@map("donation_status")
+}
+
+enum PayrollStatus {
+  draft
+  reviewed
+  approved
+  paid
+
+  @@map("payroll_status")
+}
+
+enum TargetStatus {
+  in_progress
+  achieved
+  exceeded
+  missed
+
+  @@map("target_status")
+}
+
+enum CharityStatus {
+  active
+  inactive
+
+  @@map("charity_status")
+}
+
+enum MarketerStatus {
+  active
+  on_leave
+  inactive
+
+  @@map("marketer_status")
+}
+
+// ------------------------------------------------------------------------------
+// Models
+// ------------------------------------------------------------------------------
+
+/// دليل الجمعيات الخيرية الشريكة
+model Charity {
+  id                   String        @id @default(cuid())
+  name                 String        @db.VarChar(255)
+  shortName            String        @map("short_name") @db.VarChar(100)
+  code                 String        @unique @db.VarChar(50)
+  licenseNumber        String        @map("license_number") @db.VarChar(100)
+  category             String        @db.VarChar(150)
+  city                 String        @default("الرياض") @db.VarChar(100)
+  contactPerson        String        @map("contact_person") @db.VarChar(150)
+  phone                String        @db.VarChar(50)
+  email                String        @db.VarChar(150)
+  logoUrl              String?       @map("logo_url") @db.Text
+  totalRaised          Decimal       @default(0.00) @map("total_raised") @db.Decimal(14, 2)
+  targetAmount         Decimal       @default(0.00) @map("target_amount") @db.Decimal(14, 2)
+  activeMarketersCount Int           @default(0) @map("active_marketers_count")
+  status               CharityStatus @default(active)
+  commissionRate       Decimal       @default(10.00) @map("commission_rate") @db.Decimal(5, 2)
+  description          String?       @db.Text
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  users          User[]
+  donations      Donation[]
+  monthlyTargets MonthlyTarget[]
+
+  @@index([code])
+  @@index([city])
+  @@map("charities")
+}
+
+/// فريق المسوقين الميدانيين
+model Marketer {
+  id                   String         @id @default(cuid())
+  name                 String         @db.VarChar(150)
+  nationalId           String         @map("national_id") @db.VarChar(50)
+  phone                String         @db.VarChar(50)
+  email                String         @db.VarChar(150)
+  avatarUrl            String?        @map("avatar_url") @db.Text
+  assignedCharityIds   String[]       @default([]) @map("assigned_charity_ids")
+  baseSalary           Decimal        @default(5000.00) @map("base_salary") @db.Decimal(10, 2)
+  commissionRate       Decimal        @default(6.00) @map("commission_rate") @db.Decimal(5, 2)
+  currentMonthTarget   Decimal        @default(100000.00) @map("current_month_target") @db.Decimal(12, 2)
+  currentMonthAchieved Decimal        @default(0.00) @map("current_month_achieved") @db.Decimal(12, 2)
+  totalDonationsCount  Int            @default(0) @map("total_donations_count")
+  status               MarketerStatus @default(active)
+  joinDate             DateTime       @default(now()) @map("join_date") @db.Date
+  notes                String?        @db.Text
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  users          User[]
+  donations      Donation[]
+  monthlyTargets MonthlyTarget[]
+  payrollRecords PayrollRecord[]
+
+  @@index([email])
+  @@index([nationalId])
+  @@map("marketers")
+}
+
+/// المستخدمين والأدوار
+model User {
+  id         String    @id @default(cuid())
+  name       String    @db.VarChar(150)
+  email      String    @unique @db.VarChar(150)
+  role       UserRole  @default(marketer)
+  avatar     String?   @db.Text
+  charityId  String?   @map("charity_id")
+  charity    Charity?  @relation(fields: [charityId], references: [id], onDelete: SetNull)
+  marketerId String?   @map("marketer_id")
+  marketer   Marketer? @relation(fields: [marketerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+/// سجل التبرعات الميدانية الموثقة
+model Donation {
+  id               String         @id @default(cuid())
+  receiptNumber    String         @unique @map("receipt_number") @db.VarChar(50)
+  charityId        String         @map("charity_id")
+  charity          Charity        @relation(fields: [charityId], references: [id], onDelete: Restrict)
+  charityName      String         @map("charity_name") @db.VarChar(255)
+  marketerId       String         @map("marketer_id")
+  marketer         Marketer       @relation(fields: [marketerId], references: [id], onDelete: Restrict)
+  marketerName     String         @map("marketer_name") @db.VarChar(150)
+  amount           Decimal        @db.Decimal(12, 2)
+  donorName        String         @default("فاعل خير") @map("donor_name") @db.VarChar(150)
+  donorPhone       String         @default("05XXXXXXXX") @map("donor_phone") @db.VarChar(50)
+  donorType        DonorType      @default(individual) @map("donor_type")
+  paymentMethod    PaymentMethod  @default(mada) @map("payment_method")
+  status           DonationStatus @default(completed)
+  date             DateTime       @default(now()) @db.Date
+  time             String         @default("12:00:00") @db.VarChar(20)
+  campaignName     String?        @default("كفالة ورعاية شاملة") @map("campaign_name") @db.VarChar(255)
+  receiptImageUrl  String?        @map("receipt_image_url") @db.Text
+  paymentReference String?        @map("payment_reference") @db.VarChar(100)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([charityId])
+  @@index([marketerId])
+  @@index([date(sort: Desc)])
+  @@index([receiptNumber])
+  @@map("donations")
+}
+
+/// الأهداف الشهرية ونسب التحقيق
+model MonthlyTarget {
+  id                    String       @id @default(cuid())
+  month                 Int
+  year                  Int
+  marketerId            String       @map("marketer_id")
+  marketer              Marketer     @relation(fields: [marketerId], references: [id], onDelete: Cascade)
+  marketerName          String       @map("marketer_name") @db.VarChar(150)
+  charityId             String?      @map("charity_id")
+  charity               Charity?     @relation(fields: [charityId], references: [id], onDelete: SetNull)
+  charityName           String?      @map("charity_name") @db.VarChar(255)
+  targetAmount          Decimal      @map("target_amount") @db.Decimal(12, 2)
+  achievedAmount        Decimal      @default(0.00) @map("achieved_amount") @db.Decimal(12, 2)
+  achievementPercentage Decimal      @default(0.00) @map("achievement_percentage") @db.Decimal(6, 2)
+  status                TargetStatus @default(in_progress)
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([month, year, marketerId])
+  @@index([year, month])
+  @@index([marketerId])
+  @@map("monthly_targets")
+}
+
+/// مسير الرواتب ودورة الاعتماد
+model PayrollRecord {
+  id                    String        @id @default(cuid())
+  month                 Int
+  year                  Int
+  marketerId            String        @map("marketer_id")
+  marketer              Marketer      @relation(fields: [marketerId], references: [id], onDelete: Cascade)
+  marketerName          String        @map("marketer_name") @db.VarChar(150)
+  baseSalary            Decimal       @map("base_salary") @db.Decimal(10, 2)
+  targetAmount          Decimal       @map("target_amount") @db.Decimal(12, 2)
+  achievedAmount        Decimal       @map("achieved_amount") @db.Decimal(12, 2)
+  achievementPercentage Decimal       @default(0.00) @map("achievement_percentage") @db.Decimal(6, 2)
+  commissionRate        Decimal       @map("commission_rate") @db.Decimal(5, 2)
+  commissionAmount      Decimal       @default(0.00) @map("commission_amount") @db.Decimal(10, 2)
+  bonusAmount           Decimal       @default(0.00) @map("bonus_amount") @db.Decimal(10, 2)
+  deductionsAmount      Decimal       @default(0.00) @map("deductions_amount") @db.Decimal(10, 2)
+  netSalary             Decimal       @map("net_salary") @db.Decimal(10, 2)
+  status                PayrollStatus @default(draft)
+  approvedBy            String?       @map("approved_by") @db.VarChar(150)
+  paidAt                DateTime?     @map("paid_at") @db.Timestamptz(6)
+  notes                 String?       @db.Text
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([month, year, marketerId])
+  @@index([year, month])
+  @@index([marketerId])
+  @@map("payroll_records")
+}
