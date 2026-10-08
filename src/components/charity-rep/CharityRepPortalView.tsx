@@ -17,16 +17,27 @@ import { exportDonationsToCSV, printDonationReceipt } from '../../utils/exportUt
 
 export const CharityRepPortalView: React.FC = () => {
   const { 
-    currentUser, 
-    charities, 
-    marketers, 
+    userCharities, 
+    userMarketers, 
     userDonations 
   } = useApp();
 
-  const currentRepCharity = charities.find(c => c.id === currentUser.charityId) || charities[0];
-  const assignedMarketers = marketers.filter(m => m.assignedCharityIds.includes(currentRepCharity.id));
+  const currentRepCharity = userCharities[0];
   const totalRaised = userDonations.reduce((sum, d) => sum + d.amount, 0);
-  const targetPct = currentRepCharity.targetAmount > 0 ? (totalRaised / currentRepCharity.targetAmount) * 100 : 0;
+  const targetPct = currentRepCharity && currentRepCharity.targetAmount > 0
+    ? (totalRaised / currentRepCharity.targetAmount) * 100
+    : 0;
+
+  if (!currentRepCharity) {
+    return (
+      <div className="glass-card rounded-2xl p-8 text-center text-slate-300">
+        لا توجد جمعية مرتبطة بهذا الحساب.
+      </div>
+    );
+  }
+
+  // Charity representatives do not receive the marketer roster selector.
+  const assignedMarketers = userMarketers;
 
   return (
     <div className="space-y-6 animate-fade-in pb-16 md:pb-6">

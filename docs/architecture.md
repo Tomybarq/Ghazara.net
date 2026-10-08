@@ -25,6 +25,10 @@ The MVP is client-side React state backed by `localStorage`. It is suitable for 
 8. Date/month calculations must use a single current-period helper instead of hard-coded `10/2026` values.
 9. All state updates that represent one business action must be atomic from the user’s perspective: invalid input causes no partial updates.
 
+## View Data Access Rule
+
+Presentation components must consume only the role-scoped selectors exposed by `AppContext`: `userDonations`, `userCharities`, `userMarketers`, `userTargets`, and `userPayroll`. Raw state collections remain private to the provider and are used only for internal mutations, persistence, and selector derivation. The application shell must also resolve an invalid `activeTab` to the first tab allowed by `getAccessibleTabs(currentUser.role)` before rendering a view.
+
 ## Planned Evolution
 
 Keep UI components thin. Move calculations and validation into pure domain utilities, then replace the context’s localStorage repository with an API/repository boundary when a backend is introduced. Keep the same domain types and acceptance tests across both implementations.

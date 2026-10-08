@@ -16,7 +16,7 @@ import { MonthlyTarget } from '../../types';
 export const TargetsView: React.FC = () => {
   const { 
     userTargets, 
-    marketers, 
+    userMarketers, 
     currentUser, 
     updateTarget 
   } = useApp();
@@ -100,7 +100,7 @@ export const TargetsView: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {userTargets.map((target) => {
-            const marketer = marketers.find(m => m.id === target.marketerId);
+            const marketer = userMarketers.find(m => m.id === target.marketerId);
             const isExceeded = target.achievementPercentage >= 100;
             const isSuper = target.achievementPercentage >= 115;
 

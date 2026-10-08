@@ -90,6 +90,8 @@
 - [x] Route all user-visible lists and AI context through scoped selectors.
 - [x] Hide or disable actions that the role cannot perform, while retaining context-level guards.
 - [x] Add tests proving marketer and charity representative isolation.
+- [x] Remove raw collections from the public `AppContext` value so Views cannot consume them accidentally.
+- [x] Resolve an invalid or stale `activeTab` to the first tab allowed for the current role.
 
 **Exit:** access behavior is centralized, testable, and consistent across desktop/mobile navigation.
 

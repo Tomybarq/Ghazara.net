@@ -52,11 +52,6 @@ export interface AppContextType {
   switchRole: (role: UserRole) => void;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
-  charities: Charity[];
-  marketers: Marketer[];
-  donations: Donation[];
-  monthlyTargets: MonthlyTarget[];
-  payrollRecords: PayrollRecord[];
   
   // Actions
   addDonation: (donationData: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>) => Donation | null;
@@ -474,11 +469,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       switchRole,
       activeTab,
       setActiveTab,
-      charities,
-      marketers,
-      donations,
-      monthlyTargets,
-      payrollRecords,
       addDonation,
       addCharity,
       updateCharity,

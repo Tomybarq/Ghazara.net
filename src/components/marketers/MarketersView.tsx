@@ -12,8 +12,8 @@ import { formatSAR, formatPercent } from '../../utils/formatters';
 
 export const MarketersView: React.FC = () => {
   const { 
-    marketers, 
-    charities, 
+    userMarketers, 
+    userCharities, 
     currentUser, 
     addMarketer 
   } = useApp();
@@ -28,7 +28,7 @@ export const MarketersView: React.FC = () => {
   const [baseSalary, setBaseSalary] = useState(5000);
   const [commissionRate, setCommissionRate] = useState(6.0);
   const [currentMonthTarget, setCurrentMonthTarget] = useState(100000);
-  const [assignedCharities, setAssignedCharities] = useState<string[]>([charities[0]?.id || '']);
+  const [assignedCharities, setAssignedCharities] = useState<string[]>([userCharities[0]?.id || '']);
   const [notes, setNotes] = useState('');
 
   const handleCreateMarketer = (e: React.FormEvent) => {
@@ -93,7 +93,7 @@ export const MarketersView: React.FC = () => {
 
       {/* Marketers Grid Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {marketers.map((m) => {
+        {userMarketers.map((m) => {
           const pct = m.currentMonthTarget > 0 ? (m.currentMonthAchieved / m.currentMonthTarget) * 100 : 0;
           const isExceeded = pct >= 100;
           const commissionEarned = m.currentMonthAchieved * (m.commissionRate / 100);
@@ -176,7 +176,7 @@ export const MarketersView: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {m.assignedCharityIds.map(cid => {
-                    const charity = charities.find(c => c.id === cid);
+                    const charity = userCharities.find(c => c.id === cid);
                     return charity ? (
                       <span key={cid} className="px-2 py-0.5 rounded-md bg-[#6B21C8]/20 text-purple-200 text-[10px] border border-purple-500/30">
                         {charity.shortName}
@@ -294,7 +294,7 @@ export const MarketersView: React.FC = () => {
               <div>
                 <label className="block text-slate-300 font-semibold mb-1.5">تعيين الجمعيات المسندة</label>
                 <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-[#0A0A1A] rounded-xl border border-[#23234A]">
-                  {charities.map(c => (
+                  {userCharities.map(c => (
                     <label key={c.id} className="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
                       <input
                         type="checkbox"

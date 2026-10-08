@@ -21,25 +21,25 @@ import { exportDonationsToCSV, printDonationReceipt } from '../../utils/exportUt
 export const DashboardView: React.FC = () => {
   const { 
     currentUser, 
-    charities, 
-    marketers, 
-    donations, 
-    monthlyTargets, 
+    userCharities, 
+    userMarketers, 
+    userDonations, 
+    userTargets, 
     setActiveTab, 
     setIsNewDonationModalOpen,
     setIsAIAgentOpen
   } = useApp();
 
   // Admin Calculations
-  const totalDonationsAmount = donations.reduce((sum, d) => sum + d.amount, 0);
-  const totalTargetAmount = monthlyTargets.reduce((sum, t) => sum + t.targetAmount, 0);
+  const totalDonationsAmount = userDonations.reduce((sum, d) => sum + d.amount, 0);
+  const totalTargetAmount = userTargets.reduce((sum, t) => sum + t.targetAmount, 0);
   const overallAchievement = totalTargetAmount > 0 ? (totalDonationsAmount / totalTargetAmount) * 100 : 0;
-  const activeMarketersCount = marketers.filter(m => m.status === 'active').length;
-  const activeCharitiesCount = charities.filter(c => c.status === 'active').length;
+  const activeMarketersCount = userMarketers.filter(m => m.status === 'active').length;
+  const activeCharitiesCount = userCharities.filter(c => c.status === 'active').length;
 
   // Marketer Scoped Calculations
-  const currentMarketer = marketers.find(m => m.id === currentUser.marketerId) || marketers[0];
-  const marketerDonations = donations.filter(d => d.marketerId === currentMarketer?.id);
+  const currentMarketer = userMarketers.find(m => m.id === currentUser.marketerId) || userMarketers[0];
+  const marketerDonations = userDonations.filter(d => d.marketerId === currentMarketer?.id);
   const marketerRaised = marketerDonations.reduce((sum, d) => sum + d.amount, 0);
   const marketerTarget = currentMarketer?.currentMonthTarget || 100000;
   const marketerAchievement = marketerTarget > 0 ? (marketerRaised / marketerTarget) * 100 : 0;
@@ -47,13 +47,13 @@ export const DashboardView: React.FC = () => {
   const marketerNetForecast = (currentMarketer?.baseSalary || 5000) + marketerCommission + (marketerAchievement >= 110 ? 2000 : marketerAchievement >= 100 ? 1000 : 0);
 
   // Top Performing Marketers
-  const sortedMarketers = [...marketers].sort((a, b) => b.currentMonthAchieved - a.currentMonthAchieved);
+  const sortedMarketers = [...userMarketers].sort((a, b) => b.currentMonthAchieved - a.currentMonthAchieved);
 
   // Top Charities
-  const sortedCharities = [...charities].sort((a, b) => b.totalRaised - a.totalRaised);
+  const sortedCharities = [...userCharities].sort((a, b) => b.totalRaised - a.totalRaised);
 
   // Recent 6 donations
-  const recentDonations = (currentUser.role === 'marketer' ? marketerDonations : donations).slice(0, 6);
+  const recentDonations = userDonations.slice(0, 6);
 
   return (
     <div className="space-y-6 animate-fade-in pb-16 md:pb-6">
@@ -366,7 +366,7 @@ export const DashboardView: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => exportDonationsToCSV(donations)}
+                onClick={() => exportDonationsToCSV(userDonations)}
               className="flex items-center gap-1.5 bg-[#1A1A3A] hover:bg-[#252550] text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold border border-[#23234A] transition-all"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
@@ -376,7 +376,7 @@ export const DashboardView: React.FC = () => {
               onClick={() => setActiveTab('donations')}
               className="text-xs font-bold text-purple-400 hover:text-purple-300"
             >
-              عرض كافة السجلات ({donations.length})
+              عرض كافة السجلات ({userDonations.length})
             </button>
           </div>
         </div>

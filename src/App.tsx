@@ -13,13 +13,19 @@ import { CharityRepPortalView } from './components/charity-rep/CharityRepPortalV
 import { NewDonationModal } from './components/donations/NewDonationModal';
 import { AIAssistantDrawer } from './components/ai-agent/AIAssistantDrawer';
 import { NotificationToast } from './components/common/NotificationToast';
+import { getAccessibleTabs } from './domain/access';
 
 const MainAppContent: React.FC = () => {
   const { activeTab, currentUser } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const renderActiveView = () => {
-    switch (activeTab) {
+    const accessibleTabs = getAccessibleTabs(currentUser.role);
+    const activeTabForRole = accessibleTabs.some(tab => tab.id === activeTab)
+      ? activeTab
+      : accessibleTabs[0]?.id || 'dashboard';
+
+    switch (activeTabForRole) {
       case 'dashboard':
         return <DashboardView />;
       case 'donations':

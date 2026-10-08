@@ -16,8 +16,8 @@ import { exportDonationsToCSV, printDonationReceipt } from '../../utils/exportUt
 export const DonationsView: React.FC = () => {
   const { 
     userDonations, 
-    charities, 
-    marketers, 
+    userCharities, 
+    userMarketers, 
     currentUser, 
     setIsNewDonationModalOpen,
     globalSearch,
@@ -161,7 +161,7 @@ export const DonationsView: React.FC = () => {
                 className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-ghazara-orange"
               >
                 <option value="all">كافة الجمعيات</option>
-                {charities.map(c => (
+                {userCharities.map(c => (
                   <option key={c.id} value={c.id}>{c.shortName}</option>
                 ))}
               </select>
@@ -178,7 +178,7 @@ export const DonationsView: React.FC = () => {
                 className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-ghazara-orange"
               >
                 <option value="all">كافة المسوقين</option>
-                {marketers.map(m => (
+                {userMarketers.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>

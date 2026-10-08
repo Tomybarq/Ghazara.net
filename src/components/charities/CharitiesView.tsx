@@ -17,8 +17,8 @@ import { formatSAR, formatPercent } from '../../utils/formatters';
 
 export const CharitiesView: React.FC = () => {
   const { 
-    charities, 
-    marketers, 
+    userCharities, 
+    userMarketers, 
     currentUser, 
     addCharity 
   } = useApp();
@@ -94,9 +94,9 @@ export const CharitiesView: React.FC = () => {
 
       {/* Charities Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {charities.map((c) => {
+        {userCharities.map((c) => {
           const pct = c.targetAmount > 0 ? (c.totalRaised / c.targetAmount) * 100 : 0;
-          const assignedMarketersList = marketers.filter(m => m.assignedCharityIds.includes(c.id));
+          const assignedMarketersList = userMarketers.filter(m => m.assignedCharityIds.includes(c.id));
 
           return (
             <div 

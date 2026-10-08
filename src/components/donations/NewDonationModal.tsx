@@ -16,17 +16,17 @@ export const NewDonationModal: React.FC = () => {
   const { 
     isNewDonationModalOpen, 
     setIsNewDonationModalOpen, 
-    charities, 
-    marketers, 
+    userCharities, 
+    userMarketers, 
     currentUser, 
     addDonation 
   } = useApp();
 
-  const [charityId, setCharityId] = useState(charities[0]?.id || '');
+  const [charityId, setCharityId] = useState(userCharities[0]?.id || '');
   const [marketerId, setMarketerId] = useState(
     currentUser.role === 'marketer' && currentUser.marketerId 
       ? currentUser.marketerId 
-      : marketers[0]?.id || ''
+      : userMarketers[0]?.id || ''
   );
   const [amount, setAmount] = useState<number | ''>(5000);
   const [donorName, setDonorName] = useState('');
@@ -39,8 +39,8 @@ export const NewDonationModal: React.FC = () => {
 
   if (!isNewDonationModalOpen) return null;
 
-  const selectedCharity = charities.find(c => c.id === charityId);
-  const selectedMarketer = marketers.find(m => m.id === marketerId);
+  const selectedCharity = userCharities.find(c => c.id === charityId);
+  const selectedMarketer = userMarketers.find(m => m.id === marketerId);
   
   // Calculate live expected commission
   const currentAmountNum = typeof amount === 'number' ? amount : 0;
@@ -226,7 +226,7 @@ export const NewDonationModal: React.FC = () => {
                   onChange={(e) => setCharityId(e.target.value)}
                   className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-ghazara-orange"
                 >
-                  {charities.map(c => (
+                  {userCharities.map(c => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.code})
                     </option>
@@ -244,7 +244,7 @@ export const NewDonationModal: React.FC = () => {
                   onChange={(e) => setMarketerId(e.target.value)}
                   className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-ghazara-orange disabled:opacity-60"
                 >
-                  {marketers.map(m => (
+                  {userMarketers.map(m => (
                     <option key={m.id} value={m.id}>
                       {m.name} - عمولة {m.commissionRate}%
                     </option>
