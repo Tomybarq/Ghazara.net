@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: #23234A;
+  }
+  
+  body {
+    background-color: #0A0A1A;
+    color: #F8FAFC;
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    direction: rtl;
+    overflow-x: hidden;
+  }
+
+  /* Custom Scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0A0A1A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #23234A;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6B21C8;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(18, 18, 43, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .glass-card-hover {
+    transition: all 0.25s ease-in-out;
+  }
+  .glass-card-hover:hover {
+    background: rgba(26, 26, 58, 0.95);
+    border-color: rgba(107, 33, 200, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(107, 33, 200, 0.2);
+  }
+
+  .glass-input {
+    background: rgba(10, 10, 26, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .glass-input:focus {
+    border-color: #FF6B2B;
+    box-shadow: 0 0 0 2px rgba(255, 107, 43, 0.2);
+    outline: none;
+  }
+
+  .badge-purple {
+    background: rgba(107, 33, 200, 0.15);
+    color: #A78BFA;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+  
+  .badge-orange {
+    background: rgba(255, 107, 43, 0.15);
+    color: #FF8A50;
+    border: 1px solid rgba(255, 107, 43, 0.3);
+  }
+
+  .badge-emerald {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .badge-rose {
+    background: rgba(244, 63, 94, 0.15);
+    color: #FB7185;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Hide spin buttons for numbers */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
