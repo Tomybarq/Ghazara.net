@@ -1,7 +1,10 @@
 import { Donation, PayrollRecord } from '../types';
-import { formatSAR, getPaymentMethodLabel, getDonorTypeLabel } from './formatters';
+import { getPaymentMethodLabel, getDonorTypeLabel } from './formatters';
 
-export const exportDonationsToCSV = (donations: Donation[], filename = 'donations_ghazara.csv') => {
+/**
+ * Pure generator for Donations CSV text with UTF-8 BOM.
+ */
+export function generateDonationsCSV(donations: Donation[]): string {
   const headers = [
     'رقم الإيصال',
     'الجمعية الخيرية',
@@ -34,21 +37,15 @@ export const exportDonationsToCSV = (donations: Donation[], filename = 'donation
     `"${d.notes || ''}"`
   ]);
 
-  // UTF-8 BOM for Arabic support in Excel
+  // UTF-8 BOM for Arabic support in Microsoft Excel
   const BOM = '\uFEFF';
-  const csvContent = BOM + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-  
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+  return BOM + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+}
 
-export const exportPayrollToCSV = (payroll: PayrollRecord[], filename = 'payroll_ghazara.csv') => {
+/**
+ * Pure generator for Payroll CSV text with UTF-8 BOM.
+ */
+export function generatePayrollCSV(payroll: PayrollRecord[]): string {
   const headers = [
     'الشهر/السنة',
     'اسم المسوق',
@@ -77,13 +74,38 @@ export const exportPayrollToCSV = (payroll: PayrollRecord[], filename = 'payroll
     p.bonusAmount,
     p.deductionsAmount,
     p.netSalary,
-    `"${p.status}"`,
+    `"${p.status === 'paid' ? 'تم الصرف' : p.status === 'approved' ? 'معتمد' : p.status === 'reviewed' ? 'تمت المراجعة' : 'مسودة'}"`,
     `"${p.notes || ''}"`
   ]);
 
   const BOM = '\uFEFF';
-  const csvContent = BOM + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-  
+  return BOM + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+}
+
+/**
+ * Triggers browser download for Donations CSV
+ */
+export const exportDonationsToCSV = (donations: Donation[], filename = 'donations_ghazara.csv') => {
+  if (typeof document === 'undefined') return;
+
+  const csvContent = generateDonationsCSV(donations);
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+/**
+ * Triggers browser download for Payroll CSV
+ */
+export const exportPayrollToCSV = (payroll: PayrollRecord[], filename = 'payroll_ghazara.csv') => {
+  if (typeof document === 'undefined') return;
+
+  const csvContent = generatePayrollCSV(payroll);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
@@ -95,6 +117,7 @@ export const exportPayrollToCSV = (payroll: PayrollRecord[], filename = 'payroll
 };
 
 export const printDonationReceipt = (donation: Donation) => {
+  if (typeof window === 'undefined') return;
   const receiptWindow = window.open('', '_blank', 'width=700,height=800');
   if (!receiptWindow) return;
 
@@ -202,7 +225,7 @@ export const printDonationReceipt = (donation: Donation) => {
 
         <div class="amount-box">
           <div style="font-size: 13px; color: #475569; margin-bottom: 4px;">المبلغ المستلم</div>
-          <div class="amount-value">${formatSAR(donation.amount)}</div>
+          <div class="amount-value">${donation.amount.toLocaleString('ar-SA')} ر.س</div>
         </div>
 
         <div class="info-grid">

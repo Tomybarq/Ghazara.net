@@ -308,6 +308,17 @@ export const MarketersView: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">ملاحظات إضافية</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="أي ملاحظات حول الخبرة أو المنطقة الجغرافية..."
+                  rows={2}
+                  className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-ghazara-orange text-xs"
+                />
+              </div>
+
               <div className="flex gap-3 pt-4 border-t border-[#23234A]">
                 <button
                   type="submit"

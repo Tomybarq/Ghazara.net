@@ -1,18 +1,12 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
-  Building2, 
   HandHeart, 
-  Target, 
   Users, 
   Download, 
-  FileCheck, 
-  TrendingUp, 
-  Coins, 
-  Calendar,
-  Sparkles
+  FileCheck
 } from 'lucide-react';
-import { formatSAR, formatPercent, getPaymentMethodLabel, getDonationStatusLabel } from '../../utils/formatters';
+import { formatSAR, formatPercent, getPaymentMethodLabel } from '../../utils/formatters';
 import { exportDonationsToCSV, printDonationReceipt } from '../../utils/exportUtils';
 
 export const CharityRepPortalView: React.FC = () => {

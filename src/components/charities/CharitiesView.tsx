@@ -5,13 +5,8 @@ import {
   Plus, 
   FileCheck, 
   MapPin, 
-  Phone, 
-  Mail, 
   Users, 
-  HandHeart, 
-  Coins, 
-  X,
-  Target
+  X
 } from 'lucide-react';
 import { formatSAR, formatPercent } from '../../utils/formatters';
 
@@ -280,6 +275,30 @@ export const CharitiesView: React.FC = () => {
                     placeholder="05XXXXXXXX"
                     className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-ghazara-orange text-left"
                     dir="ltr"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">البريد الإلكتروني</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="info@charity.org.sa"
+                    className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-ghazara-orange text-left"
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">نبذة عن الجمعية</label>
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="نبذة مختصرة عن نشاط الجمعية..."
+                    className="w-full bg-[#0A0A1A] border border-[#23234A] rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-ghazara-orange"
                   />
                 </div>
               </div>

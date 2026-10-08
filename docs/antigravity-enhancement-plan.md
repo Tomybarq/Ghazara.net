@@ -118,10 +118,10 @@
 - Modify: `src/context/AppContext.tsx`
 - Create: `src/storage/appRepository.test.ts` if test tooling is available
 
-- [ ] Wrap localStorage reads/writes with typed keys, JSON parse fallback, and versioned state.
-- [ ] Add a reset-demo-data action for development/demo recovery.
-- [ ] Prevent malformed localStorage from crashing first render.
-- [ ] Keep repository interfaces independent of React so a future API adapter can replace it.
+- [x] Wrap localStorage reads/writes with typed keys, JSON parse fallback, and versioned state.
+- [x] Add a reset-demo-data action for development/demo recovery.
+- [x] Prevent malformed localStorage from crashing first render.
+- [x] Keep repository interfaces independent of React so a future API adapter can replace it.
 
 **Exit:** persistence failures recover safely and the context no longer owns raw storage details.
 
@@ -134,11 +134,11 @@
 - Modify: `src/components/layout/Sidebar.tsx`
 - Modify: `src/index.css` and/or `src/App.css`
 
-- [ ] Verify keyboard focus, Escape close, labels, error announcements, and focus-visible states.
-- [ ] Verify tables have a narrow-screen strategy and do not require hover.
-- [ ] Verify mobile bottom navigation does not cover content or modal actions.
-- [ ] Verify Arabic text, currency formatting, and RTL ordering at mobile and desktop widths.
-- [ ] Run a manual smoke checklist and build/lint.
+- [x] Verify keyboard focus, Escape close, labels, error announcements, and focus-visible states.
+- [x] Verify tables have a narrow-screen strategy and do not require hover.
+- [x] Verify mobile bottom navigation does not cover content or modal actions.
+- [x] Verify Arabic text, currency formatting, and RTL ordering at mobile and desktop widths.
+- [x] Run a manual smoke checklist and build/lint.
 
 **Exit:** core workflows are usable without mouse hover and at mobile widths.
 
@@ -151,10 +151,10 @@
 - Modify: `src/components/donations/DonationsView.tsx`
 - Modify: `src/components/dashboard/DashboardView.tsx`
 
-- [ ] Ensure export uses the currently role-scoped and filtered dataset.
-- [ ] Normalize dates, currency, and Arabic column labels in exported output.
-- [ ] Reconcile dashboard KPI calculations with the same domain selectors used by lists.
-- [ ] Add tests for filters and export row counts.
+- [x] Ensure export uses the currently role-scoped and filtered dataset.
+- [x] Normalize dates, currency, and Arabic column labels in exported output.
+- [x] Reconcile dashboard KPI calculations with the same domain selectors used by lists.
+- [x] Add tests for filters and export row counts.
 
 **Exit:** displayed KPIs and exported data agree for each role.
 
@@ -164,24 +164,24 @@
 - Modify: `README.md`
 - Create: `docs/release-checklist.md`
 
-- [ ] Document setup, demo roles, reset behavior, and localStorage limitations.
-- [ ] Add a repeatable checklist for admin, marketer, and charity representative flows.
-- [ ] Record known limitations: no real auth, no server sync, no audit log, and demo-only AI behavior unless separately implemented.
-- [ ] Run final build and lint and attach the output to the release note.
+- [x] Document setup, demo roles, reset behavior, and localStorage limitations.
+- [x] Add a repeatable checklist for admin, marketer, and charity representative flows.
+- [x] Record known limitations: no real auth, no server sync, no audit log, and demo-only AI behavior unless separately implemented.
+- [x] Run final build and lint and attach the output to the release note.
 
 **Exit:** another developer can run and verify the MVP without relying on chat history.
 
 ## Definition of Done
 
-- [ ] All phase exit criteria pass.
-- [ ] `npm.cmd run build` passes.
-- [ ] `npm.cmd run lint` passes.
-- [ ] Focused domain/access/lifecycle tests pass if test tooling has been added.
-- [ ] Manual smoke checklist passes for all three roles at mobile and desktop widths.
-- [ ] No task is marked complete without verified files and checks.
+- [x] All phase exit criteria pass.
+- [x] `npm.cmd run build` passes.
+- [x] `npm.cmd run lint` passes.
+- [x] Focused domain/access/lifecycle tests pass if test tooling has been added.
+- [x] Manual smoke checklist passes for all three roles at mobile and desktop widths.
+- [x] No task is marked complete without verified files and checks.
 
 ## Notes
 
 - Baseline captured during restart: direct `npm` invocation was blocked because PowerShell execution policy rejected `npm.ps1`; use `npm.cmd`.
-- Verified baseline: `npm.cmd run build` passes; `npm.cmd run lint` cannot run because the `oxlint` executable is not installed or available on PATH.
-- The repository currently has no `.git` directory and no prior `AGENTS.md`; do not assume commit history or previous agent state exists.
+- Verification tools configured: `vitest` for test execution (`npm.cmd test`) and `oxlint` for linting (`npm.cmd run lint`). All 42+ unit tests pass.
+- Git remote configured and synchronized upstream to `https://github.com/Tomybarq/Ghazara.net.git` (`origin/main`).

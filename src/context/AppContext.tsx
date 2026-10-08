@@ -10,14 +10,7 @@ import {
   UserRole, 
   PayrollStatus 
 } from '../types';
-import { 
-  initialCharities, 
-  initialMarketers, 
-  initialDonations, 
-  initialMonthlyTargets, 
-  initialPayrollRecords, 
-  demoUsers 
-} from '../data/mockData';
+import { demoUsers } from '../data/mockData';
 import { getActivePeriod } from '../domain/period';
 import { 
   calculateAchievement, 
@@ -45,6 +38,11 @@ import {
   validateBulkApproval, 
   validateBulkPayment 
 } from '../domain/payroll';
+import { 
+  loadAppState, 
+  saveAppState, 
+  resetDemoData 
+} from '../storage/appRepository';
 
 export interface AppContextType {
   currentUser: CurrentUser;
@@ -63,6 +61,7 @@ export interface AppContextType {
   updatePayrollStatus: (payrollId: string, status: PayrollStatus) => boolean;
   markAllPayrollPaid: (month: number, year: number) => boolean;
   approveAllPayroll: (month: number, year: number) => boolean;
+  resetAllDemoData: () => void;
   
   // Modals & UI States
   isNewDonationModalOpen: boolean;
@@ -74,7 +73,7 @@ export interface AppContextType {
   notification: { message: string; type: 'success' | 'info' | 'error' } | null;
   showNotification: (message: string, type?: 'success' | 'info' | 'error') => void;
 
-  // Filtered views strictly based on roles
+  // Role-Scoped Selectors (Mandatory for all View Components)
   userDonations: Donation[];
   userCharities: Charity[];
   userMarketers: Marketer[];
@@ -85,73 +84,52 @@ export interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Persistence with localStorage fallback
-  const [currentUser, setCurrentUser] = useState<CurrentUser>(() => {
-    const saved = localStorage.getItem('ghazara_user');
-    return saved ? JSON.parse(saved) : demoUsers[0];
-  });
+  // Initialize state from repository boundary
+  const initialState = loadAppState();
 
+  const [currentUser, setCurrentUser] = useState<CurrentUser>(initialState.currentUser);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
-  const [charities, setCharities] = useState<Charity[]>(() => {
-    const saved = localStorage.getItem('ghazara_charities');
-    return saved ? JSON.parse(saved) : initialCharities;
-  });
-
-  const [marketers, setMarketers] = useState<Marketer[]>(() => {
-    const saved = localStorage.getItem('ghazara_marketers');
-    return saved ? JSON.parse(saved) : initialMarketers;
-  });
-
-  const [donations, setDonations] = useState<Donation[]>(() => {
-    const saved = localStorage.getItem('ghazara_donations');
-    return saved ? JSON.parse(saved) : initialDonations;
-  });
-
-  const [monthlyTargets, setMonthlyTargets] = useState<MonthlyTarget[]>(() => {
-    const saved = localStorage.getItem('ghazara_targets');
-    return saved ? JSON.parse(saved) : initialMonthlyTargets;
-  });
-
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => {
-    const saved = localStorage.getItem('ghazara_payroll');
-    return saved ? JSON.parse(saved) : initialPayrollRecords;
-  });
+  const [charities, setCharities] = useState<Charity[]>(initialState.charities);
+  const [marketers, setMarketers] = useState<Marketer[]>(initialState.marketers);
+  const [donations, setDonations] = useState<Donation[]>(initialState.donations);
+  const [monthlyTargets, setMonthlyTargets] = useState<MonthlyTarget[]>(initialState.monthlyTargets);
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(initialState.payrollRecords);
 
   const [isNewDonationModalOpen, setIsNewDonationModalOpen] = useState(false);
   const [isAIAgentOpen, setIsAIAgentOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  // Sync to local storage
+  // Sync state to typed repository
   useEffect(() => {
-    localStorage.setItem('ghazara_user', JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('ghazara_charities', JSON.stringify(charities));
-  }, [charities]);
-
-  useEffect(() => {
-    localStorage.setItem('ghazara_marketers', JSON.stringify(marketers));
-  }, [marketers]);
-
-  useEffect(() => {
-    localStorage.setItem('ghazara_donations', JSON.stringify(donations));
-  }, [donations]);
-
-  useEffect(() => {
-    localStorage.setItem('ghazara_targets', JSON.stringify(monthlyTargets));
-  }, [monthlyTargets]);
-
-  useEffect(() => {
-    localStorage.setItem('ghazara_payroll', JSON.stringify(payrollRecords));
-  }, [payrollRecords]);
+    saveAppState({
+      version: 1,
+      currentUser,
+      charities,
+      marketers,
+      donations,
+      monthlyTargets,
+      payrollRecords,
+    });
+  }, [currentUser, charities, marketers, donations, monthlyTargets, payrollRecords]);
 
   const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => {
       setNotification(null);
     }, 4000);
+  };
+
+  const resetAllDemoData = () => {
+    const seed = resetDemoData();
+    setCurrentUser(seed.currentUser);
+    setCharities(seed.charities);
+    setMarketers(seed.marketers);
+    setDonations(seed.donations);
+    setMonthlyTargets(seed.monthlyTargets);
+    setPayrollRecords(seed.payrollRecords);
+    setActiveTab('dashboard');
+    showNotification('تمت إعادة ضبط البيانات التجريبية بنجاح إلى حالتها الأصلية!', 'success');
   };
 
   const switchRole = (role: UserRole) => {
@@ -455,7 +433,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return true;
   };
 
-  // Pure Role-Scoped Data Filtering
+  // Pure Role-Scoped Data Filtering (View Consumers Read These Only)
   const userDonations = getVisibleDonations(donations, currentUser);
   const userCharities = getVisibleCharities(charities, currentUser, marketers);
   const userMarketers = getVisibleMarketers(marketers, currentUser);
@@ -478,6 +456,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updatePayrollStatus,
       markAllPayrollPaid,
       approveAllPayroll,
+      resetAllDemoData,
       isNewDonationModalOpen,
       setIsNewDonationModalOpen,
       isAIAgentOpen,

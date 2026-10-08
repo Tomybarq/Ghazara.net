@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   X, 
@@ -36,6 +36,17 @@ export const NewDonationModal: React.FC = () => {
   const [campaignName, setCampaignName] = useState('كفالة ورعاية شاملة');
   const [notes, setNotes] = useState('');
   const [lastCreatedDonation, setLastCreatedDonation] = useState<Donation | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isNewDonationModalOpen) {
+        setIsNewDonationModalOpen(false);
+        setLastCreatedDonation(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isNewDonationModalOpen, setIsNewDonationModalOpen]);
 
   if (!isNewDonationModalOpen) return null;
 
