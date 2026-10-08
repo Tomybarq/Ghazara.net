@@ -266,20 +266,22 @@ export const DashboardView: React.FC = () => {
             </button>
           </div>
 
-          {/* Marketer Target Bars */}
+          {/* Marketer Target Bars with Rank Medals */}
           <div className="space-y-4 pt-2">
-            {sortedMarketers.slice(0, 4).map((m) => {
+            {sortedMarketers.slice(0, 4).map((m, idx) => {
               const pct = m.currentMonthTarget > 0 ? (m.currentMonthAchieved / m.currentMonthTarget) * 100 : 0;
               const isExceeded = pct >= 100;
+              const medals = ['🥇', '🥈', '🥉'];
               return (
-                <div key={m.id} className="bg-[#0A0A1A]/80 p-3.5 rounded-xl border border-[#23234A] space-y-2">
+                <div key={m.id} className="bg-[#0A0A1A]/80 p-3.5 rounded-xl border border-[#23234A] space-y-2 hover:border-purple-500/40 transition-all">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2.5">
+                      <span className="text-sm">{medals[idx] || `#${idx + 1}`}</span>
                       <img src={m.avatarUrl} alt={m.name} className="w-7 h-7 rounded-lg object-cover" />
                       <span className="font-bold text-slate-100">{m.name}</span>
                       {isExceeded && (
                         <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                          تجاوز الهدف 🏆
+                          درع التميز 🏆
                         </span>
                       )}
                     </div>

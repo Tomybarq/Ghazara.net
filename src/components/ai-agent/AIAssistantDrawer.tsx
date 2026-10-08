@@ -8,20 +8,22 @@ import {
   User, 
   Lightbulb
 } from 'lucide-react';
-import { formatSAR, formatPercent } from '../../utils/formatters';
-import { getActivePeriod } from '../../domain/period';
+import { generateCopilotAnswer, CopilotResponse } from '../../domain/copilot';
+import { ActiveTab } from '../../types';
 
 interface Message {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
   time: string;
+  suggestedActions?: { label: string; tab?: ActiveTab }[];
 }
 
 export const AIAssistantDrawer: React.FC = () => {
   const { 
     isAIAgentOpen, 
     setIsAIAgentOpen, 
+    setActiveTab,
     userDonations, 
     userCharities, 
     userMarketers, 
@@ -30,13 +32,12 @@ export const AIAssistantDrawer: React.FC = () => {
     currentUser 
   } = useApp();
 
-  const activePeriod = getActivePeriod();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg_1',
       sender: 'assistant',
-      text: `أهلاً بك يا ${currentUser.name}! أنا المساعد الذكي لمنظومة غزارة لإدارة مبيعات وتبرعات الجمعيات الخيرية. يمكنك سؤالي عن تحليل الإيرادات، الأداء، المستهدفات، والتقارير المالية المتاحة لصلاحياتك. كيف أساعدك اليوم؟`,
+      text: `أهلاً بك يا ${currentUser.name}! أنا المساعد الذكي لمنظومة غزارة لإدارة مبيعات وتبرعات الجمعيات الخيرية. يمكنك سؤالي عن تحليل الإيرادات، أداء المسوقين، المستهدفات، والتقارير المالية المتاحة لصلاحياتك. كيف أساعدك اليوم؟`,
       time: 'الآن',
     }
   ]);
@@ -49,24 +50,6 @@ export const AIAssistantDrawer: React.FC = () => {
   }, [messages, isTyping]);
 
   if (!isAIAgentOpen) return null;
-
-  // Real-time scoped metrics calculations
-  const totalRaised = userDonations.reduce((sum, d) => sum + d.amount, 0);
-  const totalTarget = userTargets.reduce((sum, t) => sum + t.targetAmount, 0);
-  const overallPct = totalTarget > 0 ? (totalRaised / totalTarget) * 100 : 0;
-  
-  const sortedMarketers = [...userMarketers].sort((a, b) => b.currentMonthAchieved - a.currentMonthAchieved);
-  const topMarketer = sortedMarketers[0];
-  const exceededMarketers = sortedMarketers.filter(m => (m.currentMonthAchieved / (m.currentMonthTarget || 1)) >= 1);
-
-  const sortedCharities = [...userCharities].sort((a, b) => b.totalRaised - a.totalRaised);
-  const topCharity = sortedCharities[0];
-
-  const currentPeriodPayroll = userPayroll.filter(
-    p => p.month === activePeriod.month && p.year === activePeriod.year
-  );
-  const totalPayrollNet = currentPeriodPayroll.reduce((sum, p) => sum + p.netSalary, 0);
-  const totalCommission = currentPeriodPayroll.reduce((sum, p) => sum + p.commissionAmount, 0);
 
   // Quick Questions based on Role
   const getQuickQuestions = () => {
@@ -111,39 +94,14 @@ export const AIAssistantDrawer: React.FC = () => {
     setIsTyping(true);
 
     setTimeout(() => {
-      let reply = '';
-      const q = textToSend.toLowerCase();
-
-      if (currentUser.role === 'charity_rep') {
-        if (q.includes('رواتب') || q.includes('عمولات') || q.includes('مسير')) {
-          reply = '🔒 مسيرات الرواتب والعمولات الداخلية خاصة بإدارة المبيعات والتسويق ولا تتاح لحسابات ممثلي الجمعيات.';
-        } else if (q.includes('تبرعات') || q.includes('إجمالي') || q.includes('تحصيل')) {
-          reply = `📊 **تقرير تبرعات جمعيتكم (${topCharity?.name || 'الجمعية'}):**\n• إجمالي المبالغ المحصلة: **${formatSAR(totalRaised)}**\n• عدد التبرعات المسجلة: **${userDonations.length} عملية تبرع**.\nجميع السجلات محدثة لحظياً من مسوقي غزارة الميدانيين.`;
-        } else if (q.includes('قنوات') || q.includes('دفع') || q.includes('سداد')) {
-          reply = '💳 تشير بيانات تبرعاتكم إلى أن وسائل الدفع الإلكتروني (مدى و Apple Pay) تمثل النسبة الكبرى من تبرعات الأفراد المباشرة.';
-        } else {
-          reply = `إجمالي التحصيل الميداني لجمعيتكم حتى اللحظة هو **${formatSAR(totalRaised)}** عبر **${userDonations.length} عملية تبرع**.`;
-        }
-      } else if (currentUser.role === 'marketer') {
-        if (q.includes('إنجازي') || q.includes('هدف') || q.includes('تارغت')) {
-          reply = `🎯 **متابعة إنجازك الشهري:**\n• المحقق: **${formatSAR(topMarketer?.currentMonthAchieved || 0)}** من مستهدف **${formatSAR(topMarketer?.currentMonthTarget || 0)}**\n• نسبة الإنجاز: **${formatPercent(overallPct)}**\n${overallPct >= 100 ? '🎉 أحسنت! لقد حققت الهدف الشهري واستحققت حافز التميز.' : 'استمر في بذل الجهد للوصول إلى 100% وتحقيق حافز إضافي!'}`;
-        } else if (q.includes('عمول') || q.includes('راتب') || q.includes('مستحق')) {
-          reply = `💰 **بيانات مستحقاتك المالية للشهر الحالي:**\n• العمولة المكتسبة: **${formatSAR(totalCommission)}**\n• صافي الراتب التقديري: **${formatSAR(totalPayrollNet)}**\n(يتم صرف الرواتب والعمولات بعد اعتمادها من الإدارة المالية).`;
-        } else {
-          reply = `حققت حتى الآن **${formatSAR(totalRaised)}** بنسبة إنجاز **${formatPercent(overallPct)}**. لديك **${userCharities.length} جمعيات معتمدة** يمكنك تسويق مشاريعها.`;
-        }
-      } else {
-        // Admin responses
-        if (q.includes('أفضل مسوق') || q.includes('اعلى مسوق') || q.includes('تجاوز') || q.includes('المتميز')) {
-          reply = `بناءً على السجلات اللحظية لشهر ${activePeriod.month}/${activePeriod.year}:\n🏆 **المسوق الأكثر تميزاً:** ${topMarketer?.name || 'لا يوجد'} بإجمالي تحصيل قدره **${formatSAR(topMarketer?.currentMonthAchieved || 0)}**.\n\nعدد المسوقين المحققين لأهدافهم: **${exceededMarketers.length} مسوقين**.\nيتم احتساب بونص إضافي آلياً عند تجاوز 115%.`;
-        } else if (q.includes('جمعيات') || q.includes('اعلى جمعية') || q.includes('ايرادات الجمعيات')) {
-          reply = `📊 **تحليل إيرادات الجمعيات الخيرية الشريكة:**\nالجمعية المتصدرة هي **${topCharity?.name || 'لا توجد'}** بمبلغ إجمالي **${formatSAR(topCharity?.totalRaised || 0)}**.\n\nإجمالي ما تم تحصيله لكافة الجمعيات: **${formatSAR(totalRaised)}**.`;
-        } else if (q.includes('رواتب') || q.includes('عمولات') || q.includes('مسير') || q.includes('صافي')) {
-          reply = `💰 **التقرير المالي لمسير رواتب شهر ${activePeriod.month}/${activePeriod.year}:**\n• إجمالي العمولات: **${formatSAR(totalCommission)}**\n• إجمالي صافي المسير: **${formatSAR(totalPayrollNet)}**\n• حالة المسيرات: تخضع لدورة الاعتماد والصرف الإلزامية.`;
-        } else {
-          reply = `إجمالي التبرعات الحالية في النظام هو **${formatSAR(totalRaised)}** بمعدل إنجاز **${formatPercent(overallPct)}** من المستهدف العام.`;
-        }
-      }
+      const response: CopilotResponse = generateCopilotAnswer(textToSend, {
+        currentUser,
+        donations: userDonations,
+        charities: userCharities,
+        marketers: userMarketers,
+        targets: userTargets,
+        payroll: userPayroll,
+      });
 
       setIsTyping(false);
       setMessages(prev => [
@@ -151,11 +109,12 @@ export const AIAssistantDrawer: React.FC = () => {
         {
           id: `ai_${Date.now()}`,
           sender: 'assistant',
-          text: reply,
+          text: response.text,
           time: new Date().toTimeString().substring(0, 5),
+          suggestedActions: response.suggestedActions,
         }
       ]);
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -231,6 +190,26 @@ export const AIAssistantDrawer: React.FC = () => {
                   : 'bg-[#151538] text-slate-100 border border-[#23234A] rounded-tr-none'
               }`}>
                 {msg.text}
+                
+                {msg.suggestedActions && msg.suggestedActions.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-[#23234A]/80">
+                    {msg.suggestedActions.map((action, aIdx) => (
+                      <button
+                        key={aIdx}
+                        onClick={() => {
+                          if (action.tab) {
+                            setActiveTab(action.tab);
+                            setIsAIAgentOpen(false);
+                          }
+                        }}
+                        className="bg-[#6B21C8]/30 hover:bg-[#6B21C8] border border-[#6B21C8]/50 text-white text-[11px] px-2.5 py-1 rounded-lg transition-all"
+                      >
+                        {action.label} ↗
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className={`text-[10px] mt-1.5 ${msg.sender === 'user' ? 'text-orange-100' : 'text-slate-400'}`}>
                   {msg.time}
                 </div>
