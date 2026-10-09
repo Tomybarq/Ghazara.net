@@ -1,0 +1,32 @@
+# Ghazara Sales App - 100% Gold Code AI-Readiness Context (application/vnd.faf+yaml)
+schema_version: "1.0"
+
+project:
+  name: "Ghazara Sales App"
+  goal: "Arabic RTL sales and charity-fundraising MVP for Ghazara Trading & Marketing with role-based dashboards, field donation logging, monthly target tracking, and commission payroll."
+  main_language: "TypeScript"
+  app_type: "web"
+
+human_context:
+  why: "To digitize and streamline Ghazara's charity marketing campaigns, track marketer performance in real-time, and automate commission payroll."
+  who: "Admins + Field Marketers + Charity Representatives + AI Agents"
+  what: "Solves disconnected manual paperwork by providing transparent donation accounting, target achievement indicators, and auditable payroll workflows."
+  where: "Cloud-hosted modern web application with PostgreSQL distributed backend."
+  when: "Active MVP production readiness."
+  how: "Built with modern React 19 SPA, Tailwind CSS RTL design system, and Prisma-backed PostgreSQL schema."
+
+stack:
+  frontend: "React 19 + Tailwind CSS + Lucide Icons"
+  backend: "PostgreSQL + Prisma ORM"
+  database: "PostgreSQL"
+  hosting: "Vercel + Prisma Data Platform"
+  testing: "Vitest"
+  cicd: "GitHub Actions"
+
+rules:
+  rtl: true
+  primary_language: "Arabic"
+  roles:
+    - "admin"
+    - "marketer"
+    - "charity_rep"
