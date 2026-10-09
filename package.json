@@ -10,6 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "db:sync": "node database/sync.mjs",
+    "supabase:push": "supabase db push",
     "preview": "vite preview"
   },
   "dependencies": {
