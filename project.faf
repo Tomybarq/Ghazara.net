@@ -1,32 +1,64 @@
-# Ghazara Sales App - 100% Gold Code AI-Readiness Context (application/vnd.faf+yaml)
+# Ghazara Sales App - AI Context Specification (application/vnd.faf+yaml)
 schema_version: "1.0"
 
 project:
   name: "Ghazara Sales App"
-  goal: "Arabic RTL sales and charity-fundraising MVP for Ghazara Trading & Marketing with role-based dashboards, field donation logging, monthly target tracking, and commission payroll."
-  main_language: "TypeScript"
-  app_type: "web"
-
-human_context:
-  why: "To digitize and streamline Ghazara's charity marketing campaigns, track marketer performance in real-time, and automate commission payroll."
-  who: "Admins + Field Marketers + Charity Representatives + AI Agents"
-  what: "Solves disconnected manual paperwork by providing transparent donation accounting, target achievement indicators, and auditable payroll workflows."
-  where: "Cloud-hosted modern web application with PostgreSQL distributed backend."
-  when: "Active MVP production readiness."
-  how: "Built with modern React 19 SPA, Tailwind CSS RTL design system, and Prisma-backed PostgreSQL schema."
+  domain: "charity fundraising + sales commissions"
+  locale:
+    ui: "ar-YE"
+    rtl: true
+    currency: "YER"
+    timezone: "Asia/Aden"
 
 stack:
-  frontend: "React 19 + Tailwind CSS + Lucide Icons"
-  backend: "PostgreSQL + Prisma ORM"
-  database: "PostgreSQL"
-  hosting: "Vercel + Prisma Data Platform"
-  testing: "Vitest"
-  cicd: "GitHub Actions"
+  frontend:
+    framework: "React 19"
+    styling: "Tailwind CSS 4"
+    routing: "react-router 7"
+  backend:
+    orm: "Prisma 6"
+    db: "PostgreSQL 16 (Supabase, direct:5432 / pooled:6543)"
+    auth: "Supabase Auth (JWT in Authorization header)"
+  runtime:
+    node: ">=20"
+    package_manager: "npm"
 
-rules:
-  rtl: true
-  primary_language: "Arabic"
-  roles:
-    - "admin"
-    - "marketer"
-    - "charity_rep"
+conventions:
+  api:
+    response: "{ data: T | null, error: { code, message } | null }"
+    pagination: "cursor-based (cursor, limit, nextCursor)"
+    errors: "HTTP status + error.code enum"
+  files:
+    components: "src/components/<PascalCase>.tsx"
+    api: "src/api/<resource>.ts"
+  db:
+    migrations_only: true   # لا تعديل مباشر على schema.sql بعد أول migration
+
+rbac:
+  admin:
+    can: ["crud:*", "payroll:approve", "users:manage"]
+  marketer:
+    can: ["donations:create:own", "donations:read:own", "targets:read:own"]
+  charity_rep:
+    can: ["donations:read:assigned", "donations:verify:assigned"]
+
+env:
+  required: ["DATABASE_URL", "DIRECT_URL", "SUPABASE_URL", "SUPABASE_ANON_KEY"]
+  optional: ["SHADOW_DATABASE_URL", "SENTRY_DSN"]
+
+commands:
+  dev: "npm run dev"
+  test: "vitest run"
+  migrate: "prisma migrate dev"
+  migrate_prod: "prisma migrate deploy"
+  typecheck: "tsc --noEmit"
+
+invariants:
+  - "كل donation له marketer_id و amount > 0 و currency ثابت"
+  - "لا يمكن حذف donation بعد الموافقة؛ يُعاد فقط عبر reversal"
+  - "payroll يُحسب شهريًا ولا يُعدل بعد الإغلاق"
+
+out_of_scope:
+  - "multi-tenant"
+  - "offline mode"
+  - "mobile native app"
