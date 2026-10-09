@@ -1,6 +1,6 @@
 # Prisma ORM & PostgreSQL Architecture Guide
 
-وثيقة إعداد وتكامل قاعدة البيانات وإدارة الـ Schema باستخدام **Prisma ORM** ومحرك **PostgreSQL** الموزع لتطبيق غزارة للتسويق الخيري.
+وثيقة إعداد وتكامل قاعدة البيانات وإدارة الـ Schema باستخدام **Prisma ORM** ومحرك **PostgreSQL (Supabase Pooler Architecture)** لتطبيق غزارة للتسويق الخيري.
 
 ---
 
@@ -20,50 +20,59 @@
 
 ```text
 ├── prisma/
-│   ├── schema.prisma                       # تعريف الـ Prisma Schema والنماذج والعلاقات
+│   ├── schema.prisma                       # تعريف الـ Prisma Schema والنماذج والمصادر
 │   └── migrations/
 │       └── 20261008000000_init/
 │           └── migration.sql               # ترحيل SQL الأولي لإنشاء الجداول والفهارس
 ├── database/
 │   ├── schema.sql                          # السكربت الشامل لإنشاء الجداول وسياسات RLS
-│   └── seed.sql                            # بيانات البذور الأولية (Mock Data) للتطوير والتجربة
-├── src/
-│   └── lib/
-│       └── prisma.ts                       # كائن عميل Prisma المُوحّد (Singleton Instance)
+│   ├── seed.sql                            # بيانات البذور الأولية (Mock Data) للتطوير والتجربة
+│   └── sync.mjs                            # أداة فحص التزامن وعزل قاعدة بيانات الظل
 └── docs/
     └── database-prisma.md                  # دليل Prisma و SQL وقواعد البيانات
 ```
 
 ---
 
-## 3. إعداد متغيرات البيئة (Environment Configuration)
+## 3. إعداد متغيرات البيئة لبنية Supabase (Environment Configuration)
 
-للاتصال بقاعدة البيانات عبر **Prisma Data Platform (Accelerate / Pulse)** أو مزود PostgreSQL المباشر (مثل Neon أو Supabase):
+للاتصال بقاعدة البيانات عبر **Supabase Pooler (PgBouncer/Supavisor)**:
 
 ```env
-# رابط Prisma Accelerate المسرع للاستعلامات وإدارة التجمع (Connection Pooling)
-DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=your_prisma_accelerate_key"
+# 1. اتصال مجمع المعاملات (Transaction Pooler - Port 6543)
+# مخصص للاستعلامات والعمليات الاعتيادية في التطبيق مع إدارة الـ Pooler
+DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
 
-# رابط الاتصال المباشر بقاعدة بيانات PostgreSQL (مطلوب لأوامر Migrations)
-DIRECT_URL="postgresql://postgres:password@db.your-host.com:5432/postgres?sslmode=require"
+# 2. اتصال مجمع الجلسات (Session Pooler - Port 5432)
+# مخصص لأوامر Prisma CLI والترحيلات وعمليات DDL
+DIRECT_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+
+# 3. اتصال قاعدة بيانات الظل المعزولة (Shadow Database - Port 5432)
+# مطلوب لأمر `prisma migrate dev` ويجب أن يشير إلى قاعدة بيانات/مشروع فارغ ومستقل تماماً عن الإنتاج
+SHADOW_DATABASE_URL="postgresql://postgres.[SHADOW_REF]:[SHADOW_PASSWORD]@aws-0-[SHADOW_REGION].pooler.supabase.com:5432/postgres"
+
+# 4. واجهة Supabase للعميل (Frontend Auth & Storage)
+VITE_SUPABASE_URL=https://[PROJECT_REF].supabase.co
+VITE_SUPABASE_ANON_KEY=[ANON_KEY]
 ```
+
+> ⚠️ **تنبيه أمان صارم:** لا تجعل `SHADOW_DATABASE_URL` تشير إلى قاعدة الإنتاج الأساسية أبداً؛ لأن محرك Prisma يقوم بإعادة إنشاء قاعدة بيانات الظل وحذف محتوياتها أثناء حساب الفروقات.
 
 ---
 
 ## 4. دورة حياة الأوامر (Prisma CLI Commands)
 
-### التحقق وتنسيق المخطط:
+### فحص التزامن وتشخيص الاتصال:
+```bash
+npm run db:sync
+```
+
+### التحقق من صحة المخطط:
 ```bash
 npx prisma validate
-npx prisma format
 ```
 
-### توليد عميل Prisma Client:
-```bash
-npx prisma generate
-```
-
-### تطبيق الترحيلات في بيئة التطوير:
+### تطبيق الترحيلات في بيئة التطوير (مع Shadow DB):
 ```bash
 npx prisma migrate dev --name init
 ```
