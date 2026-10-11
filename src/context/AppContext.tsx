@@ -8,7 +8,8 @@ import {
   CurrentUser, 
   ActiveTab, 
   UserRole, 
-  PayrollStatus 
+  PayrollStatus,
+  ViewMode 
 } from '../types';
 import { demoUsers } from '../data/mockData';
 import { getActivePeriod } from '../domain/period';
@@ -50,6 +51,10 @@ export interface AppContextType {
   switchRole: (role: UserRole) => void;
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+  loginAs: (user: CurrentUser) => void;
+  logout: () => void;
   
   // Actions
   addDonation: (donationData: Omit<Donation, 'id' | 'receiptNumber' | 'date' | 'time'>) => Donation | null;
@@ -95,10 +100,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [monthlyTargets, setMonthlyTargets] = useState<MonthlyTarget[]>(initialState.monthlyTargets);
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(initialState.payrollRecords);
 
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = window.localStorage.getItem('ghazara_view_mode') as ViewMode | null;
+      if (savedMode === 'landing' || savedMode === 'login' || savedMode === 'platform') {
+        return savedMode;
+      }
+    }
+    return 'landing';
+  });
+
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('ghazara_view_mode', mode);
+    }
+  };
+
   const [isNewDonationModalOpen, setIsNewDonationModalOpen] = useState(false);
   const [isAIAgentOpen, setIsAIAgentOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const loginAs = (user: CurrentUser) => {
+    setCurrentUser(user);
+    setViewMode('platform');
+    showNotification(`مرحباً بك، ${user.name}! تم تسجيل الدخول بنجاح.`, 'success');
+  };
+
+  const logout = () => {
+    setViewMode('landing');
+    showNotification('تم تسجيل الخروج بنجاح.', 'info');
+  };
 
   // Sync state to typed repository
   useEffect(() => {
@@ -447,6 +480,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       switchRole,
       activeTab,
       setActiveTab,
+      viewMode,
+      setViewMode,
+      loginAs,
+      logout,
       addDonation,
       addCharity,
       updateCharity,

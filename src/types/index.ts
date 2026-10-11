@@ -134,3 +134,6 @@ export type ActiveTab =
   | 'payroll' 
   | 'charity_portal'
   | 'reports';
+
+export type ViewMode = 'landing' | 'login' | 'platform';
+

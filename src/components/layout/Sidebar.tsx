@@ -10,7 +10,9 @@ import {
   Sparkles, 
   HeartHandshake,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Home,
+  LogOut
 } from 'lucide-react';
 import { ActiveTab } from '../../types';
 import { formatSAR } from '../../utils/formatters';
@@ -38,7 +40,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
     setActiveTab, 
     currentUser, 
     setIsAIAgentOpen,
-    userDonations
+    userDonations,
+    setViewMode,
+    logout
   } = useApp();
 
   const totalRaisedCurrent = userDonations.reduce((acc, curr) => acc + curr.amount, 0);
@@ -131,6 +135,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => 
           </div>
         </div>
       )}
+
+      {/* Quick Navigation: Landing Page & Logout */}
+      <div className="px-3 pb-2 space-y-1">
+        <button
+          onClick={() => setViewMode('landing')}
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-300 hover:text-white hover:bg-purple-600/20 transition-all text-right"
+          title={collapsed ? 'صفحة الهبوط' : undefined}
+        >
+          <Home className="w-4 h-4 shrink-0 text-purple-400" />
+          {!collapsed && <span>صفحة الهبوط الرئيسية</span>}
+        </button>
+
+        <button
+          onClick={() => logout()}
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all text-right"
+          title={collapsed ? 'تسجيل الخروج' : undefined}
+        >
+          <LogOut className="w-4 h-4 shrink-0 text-amber-400" />
+          {!collapsed && <span>تسجيل الخروج</span>}
+        </button>
+      </div>
 
       {/* Footer Toggle */}
       <div className="p-3 border-t border-[#23234A] flex items-center justify-between">

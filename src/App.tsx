@@ -14,10 +14,30 @@ import { NewDonationModal } from './components/donations/NewDonationModal';
 import { AIAssistantDrawer } from './components/ai-agent/AIAssistantDrawer';
 import { NotificationToast } from './components/common/NotificationToast';
 import { getAccessibleTabs } from './domain/access';
+import { LandingPageView } from './components/landing/LandingPageView';
+import { LoginView } from './components/auth/LoginView';
 
 const MainAppContent: React.FC = () => {
-  const { activeTab, currentUser } = useApp();
+  const { activeTab, currentUser, viewMode } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPageView />
+        <NotificationToast />
+      </>
+    );
+  }
+
+  if (viewMode === 'login') {
+    return (
+      <>
+        <LoginView />
+        <NotificationToast />
+      </>
+    );
+  }
 
   const renderActiveView = () => {
     const accessibleTabs = getAccessibleTabs(currentUser.role);

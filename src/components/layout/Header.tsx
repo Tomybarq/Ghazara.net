@@ -10,7 +10,9 @@ import {
   Building2, 
   Calendar, 
   X,
-  RotateCcw
+  RotateCcw,
+  Home,
+  LogOut
 } from 'lucide-react';
 import { UserRole } from '../../types';
 import { getActivePeriod, formatPeriod } from '../../domain/period';
@@ -23,7 +25,9 @@ export const Header: React.FC = () => {
     setIsAIAgentOpen,
     globalSearch, 
     setGlobalSearch,
-    resetAllDemoData
+    resetAllDemoData,
+    setViewMode,
+    logout
   } = useApp();
 
   const activePeriod = getActivePeriod();
@@ -191,8 +195,30 @@ export const Header: React.FC = () => {
                     </div>
                   </button>
 
-                  {/* Reset Demo Data Action */}
-                  <div className="mt-2 pt-2 border-t border-[#23234A]">
+                  {/* Navigation and Reset Actions */}
+                  <div className="mt-2 pt-2 border-t border-[#23234A] space-y-1">
+                    <button
+                      onClick={() => {
+                        setViewMode('landing');
+                        setIsRoleDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-purple-300 hover:bg-purple-500/10 transition-all font-semibold"
+                    >
+                      <Home className="w-3.5 h-3.5 text-purple-400" />
+                      <span>صفحة الهبوط الرئيسية (Landing Page)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsRoleDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 transition-all font-semibold"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-amber-400" />
+                      <span>تسجيل الخروج (Logout)</span>
+                    </button>
+
                     <button
                       onClick={handleResetData}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-rose-300 hover:bg-rose-500/10 transition-all font-semibold"
