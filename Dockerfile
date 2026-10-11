@@ -12,12 +12,8 @@ WORKDIR /app
 
 # Install dependencies (relying strictly on clean lockfile)
 COPY package*.json ./
-COPY prisma ./prisma/
 
 RUN npm ci
-
-# Generate Prisma Client artifact during build stage
-RUN npx prisma generate
 
 # Copy application sources
 COPY . .
