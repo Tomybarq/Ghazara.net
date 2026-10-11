@@ -72,7 +72,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           SHADOW_DATABASE_URL: ${{ secrets.SHADOW_DATABASE_URL }}
         run: |
-          npx prisma migrate diff \
+          npm exec --offline -- prisma migrate diff \
             --from-migrations prisma/migrations \
             --to-schema-datamodel prisma/schema.prisma \
             --shadow-database-url "$SHADOW_DATABASE_URL" \
@@ -84,7 +84,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
         run: |
           echo "Applying pending migrations against Supabase Session Pooler (:5432)..."
-          npx prisma migrate deploy
+          npm run db:migrate:deploy --offline
 
   # ----------------------------------------------------------------------------
   # 3. Build & Deploy to Cloud Run

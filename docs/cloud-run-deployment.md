@@ -18,8 +18,9 @@
    - حساب الخدمة الخاص بـ Cloud Run يُمنح فقط دور `roles/secretmanager.secretAccessor` على الأسرار المحددة للتطبيق، دون منحه صلاحية إدارة شاملة على المشروع (`Secret Manager Admin`).
 
 4. **بوابة الترحيلات والهجرة الصارمة (Pre-Deployment Migration Gate):**
-   - ترحيل قاعدة البيانات (`npx prisma migrate deploy`) ينفذ فقط عبر مسار **CI/CD (GitHub Actions)** ضد مجمع الجلسات (`DIRECT_URL` - المنفذ 5432) **قبل** نشر الحاوية الجديدة لتفادي التعارض في بيئات التشغيل المتعددة.
-   - التحقق من عدم وجود انحراف في المخطط عبر `prisma migrate diff --exit-code`.
+   - حزمة `prisma` مثبتة كـ `devDependency` ومقفلة في `package-lock.json`؛ لا يعتمد CI على تنزيل نسخة غير محددة عبر `npx`.
+   - ترحيل قاعدة البيانات (`npm run db:migrate:deploy`) ينفذ فقط عبر مسار **CI/CD (GitHub Actions)** ضد مجمع الجلسات (`DIRECT_URL` - المنفذ 5432) **قبل** نشر الحاوية الجديدة لتفادي التعارض في بيئات التشغيل المتعددة.
+   - التحقق من عدم وجود انحراف في المخطط عبر Prisma CLI المحلية و`prisma migrate diff --exit-code`.
 
 5. **إعدادات الاتصال بمجمع Supabase:**
    - `DATABASE_URL` المخصص للتشغيل يستهدف **Transaction Pooler** (المنفذ 6543) مع `?pgbouncer=true`.
@@ -99,6 +100,8 @@ done
 ---
 
 ## 4. مسار دورة حياة النشر (CI/CD Pipeline Workflow)
+
+> **ملاحظة تشخيصية:** إذا نجح `quality-gate` وفشل `migration-gate`، فلن يبدأ Docker أو Cloud Run. تحقق أولاً من وجود `DIRECT_URL` في GitHub Secrets ومن أنه يشير إلى Session Pooler على المنفذ 5432، ثم راجع سجل أمر `npm run db:migrate:deploy`.
 
 ```mermaid
 flowchart TD
