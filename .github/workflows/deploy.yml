@@ -52,6 +52,8 @@ jobs:
     needs: quality-gate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      SHADOW_DATABASE_URL: ${{ secrets.SHADOW_DATABASE_URL }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -69,8 +71,11 @@ jobs:
         run: npm exec --offline -- prisma --version
 
       # Drift Gate: Verify zero drift between migrations and schema.prisma
+      # Note: secrets context is not available in step-level `if`, so we
+      # expose SHADOW_DATABASE_URL as an env var at the job level (above)
+      # and check `env.SHADOW_DATABASE_URL` here instead.
       - name: Prisma Schema Drift Gate (optional)
-        if: ${{ secrets.SHADOW_DATABASE_URL != '' }}
+        if: ${{ env.SHADOW_DATABASE_URL != '' }}
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           SHADOW_DATABASE_URL: ${{ secrets.SHADOW_DATABASE_URL }}
@@ -85,7 +90,9 @@ jobs:
       - name: Run Prisma Migration Deploy (Session Pooler :5432)
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
-        run: npm run db:migrate:deploy --offline
+        run: |
+          echo "Applying pending migrations against Supabase Session Pooler (:5432)..."
+          npx --no-install prisma migrate deploy
 
   # ----------------------------------------------------------------------------
   # 3. Build & Deploy to Cloud Run
