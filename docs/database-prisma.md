@@ -41,19 +41,19 @@
 ```env
 # 1. اتصال مجمع المعاملات (Transaction Pooler - Port 6543)
 # مخصص للاستعلامات والعمليات الاعتيادية في التطبيق مع إدارة الـ Pooler
-DATABASE_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
+DATABASE_URL="postgresql://postgres.gyhuapqxydbywdupwzmq:[YOUR-PASSWORD]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
 
 # 2. اتصال مجمع الجلسات (Session Pooler - Port 5432)
 # مخصص لأوامر Prisma CLI والترحيلات وعمليات DDL
-DIRECT_URL="postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+DIRECT_URL="postgresql://postgres.gyhuapqxydbywdupwzmq:[YOUR-PASSWORD]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres"
 
 # 3. اتصال قاعدة بيانات الظل المعزولة (Shadow Database - Port 5432)
 # مطلوب لأمر `prisma migrate dev` ويجب أن يشير إلى قاعدة بيانات/مشروع فارغ ومستقل تماماً عن الإنتاج
 SHADOW_DATABASE_URL="postgresql://postgres.[SHADOW_REF]:[SHADOW_PASSWORD]@aws-0-[SHADOW_REGION].pooler.supabase.com:5432/postgres"
 
 # 4. واجهة Supabase للعميل (Frontend Auth & Storage)
-VITE_SUPABASE_URL=https://[PROJECT_REF].supabase.co
-VITE_SUPABASE_ANON_KEY=[ANON_KEY]
+VITE_SUPABASE_URL=https://gyhuapqxydbywdupwzmq.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_nVOrmPKpqidFo6Fv_lWkNQ_9Yd9qeQC
 ```
 
 > ⚠️ **تنبيه أمان صارم:** لا تجعل `SHADOW_DATABASE_URL` تشير إلى قاعدة الإنتاج الأساسية أبداً؛ لأن محرك Prisma يقوم بإعادة إنشاء قاعدة بيانات الظل وحذف محتوياتها أثناء حساب الفروقات.
