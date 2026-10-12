@@ -69,17 +69,17 @@ npm run db:sync
 
 ### التحقق من صحة المخطط:
 ```bash
-npx prisma validate
+npm run db:validate
 ```
 
 ### تطبيق الترحيلات في بيئة التطوير (مع Shadow DB):
 ```bash
-npx prisma migrate dev --name init
+npm run db:migrate:dev
 ```
 
-### تطبيق الترحيلات في بيئة الإنتاج:
+### تطبيق الترحيلات في بيئة الإنتاج (عبر مسار CI/CD ضد DIRECT_URL :5432):
 ```bash
-npx prisma migrate deploy
+npm run db:migrate:deploy
 ```
 
 ---

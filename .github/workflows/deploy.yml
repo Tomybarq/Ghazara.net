@@ -65,9 +65,12 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Verify Prisma CLI (pinned)
+        run: npm exec --offline -- prisma --version
+
       # Drift Gate: Verify zero drift between migrations and schema.prisma
-      - name: Prisma Schema Drift Gate
-        if: env.SHADOW_DATABASE_URL != ''
+      - name: Prisma Schema Drift Gate (optional)
+        if: ${{ secrets.SHADOW_DATABASE_URL != '' }}
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           SHADOW_DATABASE_URL: ${{ secrets.SHADOW_DATABASE_URL }}
@@ -82,9 +85,7 @@ jobs:
       - name: Run Prisma Migration Deploy (Session Pooler :5432)
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          echo "Applying pending migrations against Supabase Session Pooler (:5432)..."
-          npm run db:migrate:deploy --offline
+        run: npm run db:migrate:deploy --offline
 
   # ----------------------------------------------------------------------------
   # 3. Build & Deploy to Cloud Run

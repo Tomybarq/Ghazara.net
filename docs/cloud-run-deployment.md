@@ -7,7 +7,7 @@
 ## 1. مبادئ الأمان والتصميم الأساسية (Architecture Principles)
 
 1. **حاوية إنتاجية متعددة المراحل (Multi-Stage Dockerfile):**
-   - مرحلة البناء (`builder`) تنفذ `npx prisma generate` و `npm run build`.
+   - مرحلة البناء (`builder`) تنفذ `npm ci` و `npm run build` لتجهيز الحزم الإنتاجية.
    - مرحلة التشغيل (`runner`) مبنية على صورة مصغرة `node:22-alpine` وتعمل بمستخدم غير جذري (`USER node`).
    - خلو الحاوية تماماً من أي ملفات بيئة (`.env`) أو بيانات اعتماد صلبة.
 
@@ -18,9 +18,10 @@
    - حساب الخدمة الخاص بـ Cloud Run يُمنح فقط دور `roles/secretmanager.secretAccessor` على الأسرار المحددة للتطبيق، دون منحه صلاحية إدارة شاملة على المشروع (`Secret Manager Admin`).
 
 4. **بوابة الترحيلات والهجرة الصارمة (Pre-Deployment Migration Gate):**
-   - حزمة `prisma` مثبتة كـ `devDependency` ومقفلة في `package-lock.json`؛ لا يعتمد CI على تنزيل نسخة غير محددة عبر `npx`.
-   - ترحيل قاعدة البيانات (`npm run db:migrate:deploy`) ينفذ فقط عبر مسار **CI/CD (GitHub Actions)** ضد مجمع الجلسات (`DIRECT_URL` - المنفذ 5432) **قبل** نشر الحاوية الجديدة لتفادي التعارض في بيئات التشغيل المتعددة.
-   - التحقق من عدم وجود انحراف في المخطط عبر Prisma CLI المحلية و`prisma migrate diff --exit-code`.
+   - حزمة `prisma` مقفلة بدقة بإصدار مستقر محدد (`7.10.0`) في `devDependencies` و `package-lock.json` مع ضبط `.npmrc` (`save-exact=true`). يمنع هذا بيئة CI من تحميل إصدارات غير مستقرة أو مرشحة للإطلاق (مثل `prisma@8.0.0-rc.22` التي غيّرت بنية الأوامر).
+   - تشغيل أدوات الهجرة يتم دون اتصال عبر الحزمة المثبتة محلياً (`npm exec --offline -- prisma` و `npm run db:migrate:deploy --offline`) لتفادي أي تنزيل خارجي أثناء سير عمل GitHub Actions.
+   - ترحيل قاعدة البيانات ينفذ فقط عبر مسار **CI/CD** ضد مجمع الجلسات (`DIRECT_URL` - المنفذ 5432) **قبل** نشر الحاوية الجديدة لتفادي التعارض في بيئات التشغيل المتعددة.
+   - التحقق من عدم وجود انحراف في المخطط عبر `npm run db:drift-check` أو `prisma migrate diff --exit-code`.
 
 5. **إعدادات الاتصال بمجمع Supabase:**
    - `DATABASE_URL` المخصص للتشغيل يستهدف **Transaction Pooler** (المنفذ 6543) مع `?pgbouncer=true`.

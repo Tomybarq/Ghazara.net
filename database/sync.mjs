@@ -262,7 +262,7 @@ async function runSocketChecks() {
     console.log('\n  📌 NOTE on Verification Scope:');
     console.log('     TCP socket reachability verifies network pathway to the Supabase pooler only.');
     console.log('     It does not perform database authentication or schema inspection.');
-    console.log('     To execute migrations against Supabase, run: npx prisma migrate deploy');
+    console.log('     To execute migrations against Supabase, run: npm run db:migrate:deploy');
   }
 
   console.log('\n================================================================');
